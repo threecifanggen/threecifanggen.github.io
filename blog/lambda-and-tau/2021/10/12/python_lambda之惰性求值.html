@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python函数式编程系列007：惰性求值 - 3Gee的博客</title>
+  <meta name="description" content="本系列文章一些重要的函数、方法、类我都实现的一遍，你可以在github(点击此处)中找到代码和测试例子（如果网速过慢我也放了一份在gitee(点击此处)上，但请勿在gitee上提issue或者留言），欢迎star/fork。">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2021/10/12/python_lambda%E4%B9%8B%E6%83%B0%E6%80%A7%E6%B1%82%E5%80%BC.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">Python函数式编程系列007：惰性求值</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <blockquote>
+  <p>本系列文章一些重要的函数、方法、类我都实现的一遍，你可以在<a href="https://github.com/threecifanggen/python-functional-programming">github(点击此处)</a>中找到代码和测试例子（如果网速过慢我也放了一份在<a href="https://gitee.com/sancifanggen/fppy">gitee(点击此处)</a>上，但请勿在gitee上提<code class="language-plaintext highlighter-rouge">issue</code>或者留言），欢迎<code class="language-plaintext highlighter-rouge">star</code>/<code class="language-plaintext highlighter-rouge">fork</code>。</p>
+</blockquote>
+
+<h2 id="缘起">缘起</h2>
+
+<p>我们回到介绍高阶函数的一章，我们提到了高阶函数特别是科里化的一个好处便是「提前求值」和「推迟求值」，通过这些操作，我们可以大大优化很多代码。比如，我们使用之前的例子：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="c1"># x储存了某种我们需要的状态
+</span>    <span class="c1">## 所有可以提前计算的放在这里
+</span>    <span class="n">z</span> <span class="o">=</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">'z is {}'</span><span class="p">.</span><span class="nb">format</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">helper</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+        <span class="c1">## 所有延迟计算的放在这里
+</span>        <span class="k">return</span> <span class="n">y</span> <span class="o">*</span> <span class="n">z</span>
+    <span class="k">return</span> <span class="n">helper</span>
+</code></pre></div></div>
+
+<p>我们在调用<code class="language-plaintext highlighter-rouge">f(1)</code>的时候，其实就已经事先计算了<code class="language-plaintext highlighter-rouge">z</code>的部分，如果我们临时保存这个值，反复调用时就可以节省很大的时间：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">z</span> <span class="ow">is</span> <span class="mi">3</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">g</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">g</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># 可以看到这次就不会打印`z is xxxx`的输出了
+</span><span class="mi">9</span>
+</code></pre></div></div>
+
+<p>也就是说适时的「提前求值」和「推迟求值」都可以帮助我们大大地减少很多运算开销。这就引入我们这一篇要讲的「惰性求值」的概念，惰性求值的概念主要是：调用时才计算，并且只计算一次。</p>
+
+<h2 id="惰性属性与惰性值">惰性属性与惰性值</h2>
+
+<p>我们考虑下面一个例子：</p>
+
+<p>定义一个圆的类，通过圆心和半径来描述，但是当我们知道圆心和半径之后我们能知道很多事，比如：</p>
+
+<ol>
+  <li>周长(<code class="language-plaintext highlighter-rouge">perimeter</code>)</li>
+  <li>面积(<code class="language-plaintext highlighter-rouge">area</code>)</li>
+  <li>圆最上面坐标的位置(<code class="language-plaintext highlighter-rouge">upper_point</code>)</li>
+  <li>圆心到原点的距离(<code class="language-plaintext highlighter-rouge">distance_from_origin</code>)</li>
+  <li>…</li>
+</ol>
+
+<p>这个列表可能非常非常多，而且随着软件功能的增加，这个列表可能还会添加。我们可能有两种方法实现。第一种就是在初始化的时候都给设定为圆的属性：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">dataclass</span>
+<span class="k">class</span> <span class="nc">CircleInitial</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">r</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">=</span> <span class="n">r</span>
+
+        <span class="bp">self</span><span class="p">.</span><span class="n">perimeter</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">r</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="mf">3.14</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">upper_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">r</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">lower_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">left_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">r</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">right_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">r</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">distance_from_origin</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>我们马上可以看出问题：如果这样的属性非常多，而且涉及的计算也非常多的话，那么当我们实例化一个新的对象的时候，耗费的时间将会非常长。然而，大部分的属性，我们可能都不会用到。</p>
+
+<p>于是，就有了第二个方案，把这些实现成一个方法（我们这里仅举例一个<code class="language-plaintext highlighter-rouge">area</code>方法）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">dataclass</span>
+<span class="k">class</span> <span class="nc">CircleMethod</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">r</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="k">def</span> <span class="nf">area</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"area calculating..."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="mf">3.14</span>
+</code></pre></div></div>
+
+<p>当然，因为这个值是一个「常」量的概念，我们也可以使用<code class="language-plaintext highlighter-rouge">property</code>修饰器，这样我们就可以不用带括号地调用它了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">dataclass</span>
+<span class="k">class</span> <span class="nc">CircleMethod</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">r</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="o">@</span><span class="nb">property</span>
+    <span class="k">def</span> <span class="nf">area</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"area calculating..."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="mf">3.14</span>
+</code></pre></div></div>
+
+<p>我故意在其中加入了一行打印代码，我们可以发现，我们每次调用<code class="language-plaintext highlighter-rouge">area</code>时，都会被计算一次：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">CircleMethod</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span><span class="p">.</span><span class="n">area</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">a</span><span class="p">.</span><span class="n">area</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">area</span> <span class="n">calculating</span><span class="p">...</span>
+<span class="n">area</span> <span class="n">calculating</span><span class="p">...</span>
+<span class="mf">827.8876000000001</span>
+</code></pre></div></div>
+
+<p>这又是另外一种浪费了，于是我们发现，第一种方案适合需要经常被反复调用的属性，第二个方案实现很少被调用的属性。但是，可能我们在维护代码的时候，没法事先预判一个属性是不是经常被调用，而且这也不是一个长久之计。但我们发现我们需要的就是那么一个属性：</p>
+
+<ol>
+  <li>这个属性不会初始化的时候计算</li>
+  <li>这个属性只在被调用时计算</li>
+  <li>这个属性只会计算一次，后面不会调用</li>
+</ol>
+
+<p>这个就是「惰性求值」的概念，我们也把这种属性叫「惰性属性」。<code class="language-plaintext highlighter-rouge">Python</code>没有内置的惰性属性的概念，不过，我们可以很容易从网上找到一个实现（你也可以在我的<a href="https://github.com/threecifanggen/python-functional-programming"><code class="language-plaintext highlighter-rouge">Python-functional-programming</code></a>中的<code class="language-plaintext highlighter-rouge">lazy_evaluate.py</code>中找到）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">lazy_property</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="n">attr_name</span> <span class="o">=</span> <span class="s">"_lazy_"</span> <span class="o">+</span> <span class="n">func</span><span class="p">.</span><span class="n">__name__</span>
+
+    <span class="o">@</span><span class="nb">property</span>
+    <span class="k">def</span> <span class="nf">_lazy_property</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">):</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">,</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_lazy_property</span>
+</code></pre></div></div>
+
+<p>具体的使用，只是切换一下修饰器<code class="language-plaintext highlighter-rouge">property</code>：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">dataclass</span>
+<span class="k">class</span> <span class="nc">Circle</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">r</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="o">@</span><span class="n">lazy_property</span>
+    <span class="k">def</span> <span class="nf">area</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"area calculating..."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="bp">self</span><span class="p">.</span><span class="n">r</span> <span class="o">*</span> <span class="mf">3.14</span>
+</code></pre></div></div>
+
+<p>我们采用和上面一样的调用方式，可以发现，<code class="language-plaintext highlighter-rouge">area</code>只计算了一次（只打印了一次）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span><span class="p">.</span><span class="n">area</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">b</span><span class="p">.</span><span class="n">area</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">area</span> <span class="n">calculating</span><span class="p">...</span>
+<span class="mf">827.8876000000001</span>
+</code></pre></div></div>
+
+<p>同样的理由我们也可以实现一个惰性值的概念，不过因为<code class="language-plaintext highlighter-rouge">python</code>没有代码块的概念，我们只能用<strong>没有参数</strong>的函数来实现：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">_LazyValue</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="p">.</span><span class="n">__code__</span><span class="p">.</span><span class="n">co_argcount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NotVoidFunctionError</span><span class="p">(</span><span class="s">"value is not a void function"</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_LazyValue</span><span class="p">,</span> <span class="bp">self</span><span class="p">).</span><span class="n">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">False</span><span class="p">))</span>      
+        
+    <span class="k">def</span> <span class="nf">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_func</span><span class="p">,</span> <span class="n">_have_called</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">_LazyValue</span><span class="p">,</span> <span class="bp">self</span><span class="p">).</span><span class="n">__getattribute__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_have_called</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">_func</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">_func</span><span class="p">()</span>
+                <span class="nb">super</span><span class="p">(</span><span class="n">_LazyValue</span><span class="p">,</span> <span class="bp">self</span><span class="p">).</span><span class="n">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="bp">True</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">res</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="nb">AttributeError</span><span class="p">(</span>
+                <span class="s">"type object 'Lazy' has no attribute '{}'"</span>
+                <span class="p">.</span><span class="nb">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
+
+<span class="n">lazy_val</span> <span class="o">=</span> <span class="n">_LazyValue</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>具体调用方法如下，如果你要设计一个模块而这个变量不在类中，那么就可以很方便地使用它了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"f compute"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">12</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">lazy_val</span><span class="p">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">f</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">lazy_val</span><span class="p">.</span><span class="n">a</span>
+<span class="n">f</span> <span class="n">compute</span>
+<span class="mi">12</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">lazy_val</span><span class="p">.</span><span class="n">a</span>
+<span class="mi">12</span>
+</code></pre></div></div>
+
+<h2 id="惰性迭代器生成器">惰性迭代器/生成器</h2>
+
+<p>此外，<code class="language-plaintext highlighter-rouge">Python</code>内置了一些惰性的结构主要就是迭代器和生成器，我们可以很方便验证它们只计算/保留一次（这里只验证迭代器）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="p">[]</span>
+</code></pre></div></div>
+
+<p>我们可以设计下面两个函数：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"f"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"g"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</code></pre></div></div>
+
+<p>然后我们思考下面的结果：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">next</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>它可能有两种结果，一个它可能的计算方式是这样的：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="n">g</span><span class="p">(</span><span class="n">temp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p>如果是这种结果，则它会打印出5个<code class="language-plaintext highlighter-rouge">f</code>然后再打印出<code class="language-plaintext highlighter-rouge">g</code></p>
+
+<p>另一种可能性则是：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>则，这样子便只会打印一个<code class="language-plaintext highlighter-rouge">f</code>和一个<code class="language-plaintext highlighter-rouge">g</code>。如果根据惰性求值的定义，<code class="language-plaintext highlighter-rouge">i=1</code>并没有被真实调用，所以它应该不用求值，所以，如果他符合第二个打印情况，则它就是惰性的对象。事实也就真如此。</p>
+
+<p>当然，这个特性已经非常的Fancy了，但是我们基于此可以联想出的一个非常奇妙的引用，因为在迭代器计算中，我们并不是在生成的时候，就计算出了迭代器中的每个值，因此，我们可以用这个方式存储一个无穷系列。通过上面的方式计算后返回结果。一个最简单的例子是内置模块中的<code class="language-plaintext highlighter-rouge">itertools.repeat</code>，我们可以生成一个无穷的全为<code class="language-plaintext highlighter-rouge">1</code>的线性结构：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">repeat</span>
+
+<span class="n">repeat_1</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>这样，我们就可以用上面的列表表达式来做一些计算再通过<code class="language-plaintext highlighter-rouge">next</code>调用了。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">3</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repeat_1</span><span class="p">))</span>
+<span class="nb">next</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>我们也将这些线性结构称为「惰性列表」（这里的<code class="language-plaintext highlighter-rouge">repeat_1</code>则是一个「无穷惰性列表」的例子），在下面的文章中，我们将详细地用这个方式来完成一些有趣的事情。</p>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2021-10-12T09:35:10+08:00" itemprop="datePublished">Oct 12, 2021</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B">函数式编程</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E6%83%B0%E6%80%A7%E6%B1%82%E5%80%BC">惰性求值</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

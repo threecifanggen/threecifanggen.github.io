@@ -1,0 +1,12 @@
+.bd-navbar {
+    padding: 5px;
+    height: 32px;
+}
+
+#title {
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+div#footer-info>p>span>img.image.is-16x16 {
+    display: inline;
+}

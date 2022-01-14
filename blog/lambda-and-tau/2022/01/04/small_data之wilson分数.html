@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>小数据003：Wilson分数设计热门推荐 - 3Gee的博客</title>
+  <meta name="description" content="具体的代码可以参考这个jupyter notebook">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2022/01/04/small_data%E4%B9%8Bwilson%E5%88%86%E6%95%B0.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">小数据003：Wilson分数设计热门推荐</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <blockquote>
+  <p>具体的代码可以参考<a href="https://3gee.me/notebooks/wilson_recommender_notebook.html">这个jupyter notebook</a></p>
+</blockquote>
+
+<h2 id="背景介绍">背景介绍</h2>
+
+<p>热门推荐，最直接的方法是采用两个，一个是基于点击量，此外是基于点击率的。这两个值都会有一点问题。</p>
+
+<blockquote>
+  <p><strong>例子1</strong>： A和B两个展示品，A点击了12次，B点击了4000次。但是A一共曝光了12次，B则曝光了8000次。</p>
+</blockquote>
+
+<p>在这个例子中，我们可以看到，A的点击率可能接近100%，但是因为给它的曝光次数不多，则永远无法被推荐。这中判断热门推荐的方式的问题就是新上架的展示品永远无法得到推荐。</p>
+
+<blockquote>
+  <p><strong>例子2</strong>: A和B两个展示品，A点击了1次，共展示了2次；B点击了99次，共展示了200次。</p>
+</blockquote>
+
+<p>这个例子中，则发生了另一个问题，A的点击率为$1/2 =50\%$，而B的点击率为$99/200 = 49.5\%$。但是可能存在的问题就是，A的曝光次数过少，虽然点击率高，但是这个数据的随机波动会很大，而B的点击率却很难确认（可以思考两个数据的分布）。单纯采用点击率的方式设计热门点击，则可能存在这个概率问题。</p>
+
+<p>为了解决上面的问题，我在实际的游戏展示推荐中，采用了一个更合理的解决方案。</p>
+
+<h2 id="如何讲分布概率转为推荐分数">如何讲分布概率转为推荐分数</h2>
+
+<h3 id="一个思路">一个思路</h3>
+
+<p><code class="language-plaintext highlighter-rouge">z-score</code>其实给我们提供了一个方法，我们可以假设点击数符合一个二项分布，然后我们可以基于曝光数($N$)和点击数($C$)描绘点击数的分布为：</p>
+
+\[C/N \sim Binom(N, \frac{C}{N}) / N\]
+
+<p>于是，我们可以通过分布图重新描述刚才<strong>例子2</strong>中的点击结果，可以得到，A展示品的点击率概率是50%的概率很低，而B展示品的点击率概率为49.5%的概率则很高。</p>
+
+<p><img src="https://3gee.me/_images/wilson_ab.png" alt="" /></p>
+
+<p>我们何不比较这两个展示品的置信区间的上下限。比如，我们可以直接可以比较A点击率的下5%的分位数概率和B点击率的下5%的概率。显然，这样的话B的这个概率值就明显大于A。从这个思路出发，我们就可以设计基于置信区间的推荐分数。我们上面采用概率采样的方法，相对来说数据会不稳定，且计算量巨大，于是思路转变为，更好的计算二项分布的置信区间。</p>
+
+<p>而且，这个还有一个好处是我们可以得到一个百分比的分数，而使得最后的结果不需要归一化。</p>
+
+<h3 id="wilson方法">Wilson方法</h3>
+
+<p>查阅<a href="https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval">维基</a>的这个页面，我们可以找到一种计算二项分布的置信区间的方法（当然里面提到了一些更实验性的方案，但主流上推荐使用该方案的概率比较大）</p>
+
+\[W(p, n) = \frac {p + \frac {z_{1 - \frac{\alpha}{2}} ^ 2} {2n} \pm \frac {z_{1 - \frac{\alpha}{2}} ^ 2} {2n} \sqrt{4n(1-p)p + z_{1 - \frac{\alpha }{2}} ^ 2}} {1 + z_{1 - \frac{\alpha}{2}}  ^ 2/n}\]
+
+<p>其中：</p>
+
+<ol>
+  <li>$p$表示实际点击率</li>
+  <li>$n$表示展示次数</li>
+  <li>$\alpha$表示需要置信区间的宽度</li>
+  <li>$z_t$表示标准正态分布</li>
+</ol>
+
+<p>以下是用<code class="language-plaintext highlighter-rouge">scala</code>演示的计算代码：</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">breeze.stats.distributions.Gaussian</span>
+<span class="k">import</span> <span class="nn">math._</span>
+
+<span class="k">def</span> <span class="nf">W</span><span class="o">(</span><span class="n">pos</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">confidence</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="mf">0.95</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="nv">g</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Gaussian</span><span class="o">(</span><span class="mf">0.0</span><span class="o">,</span> <span class="mf">1.0</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">z</span> <span class="k">=</span> <span class="nv">g</span><span class="o">.</span><span class="py">inverseCdf</span><span class="o">(</span><span class="mi">1</span><span class="o">-(</span><span class="mi">1</span><span class="o">-</span><span class="n">confidence</span><span class="o">)/</span><span class="mi">2</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">phat</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pos</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="nf">return</span> <span class="o">(</span>
+        <span class="o">(</span><span class="n">phat</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="o">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="o">)</span> <span class="o">-</span> <span class="n">z</span> <span class="o">*</span> <span class="nf">sqrt</span><span class="o">((</span><span class="n">phat</span> <span class="o">*</span> <span class="o">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phat</span><span class="o">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="o">(</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">n</span><span class="o">))</span> <span class="o">/</span> <span class="n">n</span><span class="o">))</span> <span class="o">/</span> <span class="o">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="n">n</span><span class="o">),</span>
+        <span class="o">(</span><span class="n">phat</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="o">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="o">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="nf">sqrt</span><span class="o">((</span><span class="n">phat</span> <span class="o">*</span> <span class="o">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phat</span><span class="o">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="o">(</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">n</span><span class="o">))</span> <span class="o">/</span> <span class="n">n</span><span class="o">))</span> <span class="o">/</span> <span class="o">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="n">n</span><span class="o">)</span>
+    <span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">python</code>版本如下:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="k">as</span> <span class="n">sps</span>
+
+<span class="k">def</span> <span class="nf">W</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="mf">0.95</span><span class="p">):</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">sps</span><span class="p">.</span><span class="n">norm</span><span class="p">.</span><span class="n">pdf</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">confidence</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">phat</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">phat</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="n">z</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">phat</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phat</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span> <span class="o">/</span> <span class="n">n</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">n</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">phat</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">phat</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phat</span><span class="p">)</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span> <span class="o">/</span> <span class="n">n</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
+    <span class="p">)</span>
+</code></pre></div></div>
+
+<p>我们最终可以演算出两个分数为</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">W</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1"># (0.364289812745783, 0.635710187254217)
+</span><span class="n">W</span><span class="p">(</span><span class="mi">99</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span> <span class="c1"># (0.4809099483722197, 0.5090979980832595)
+</span></code></pre></div></div>
+
+<h3 id="进一步的改进">进一步的改进</h3>
+
+<p>当然，我们选择了下限的值作为比较，一定没有问题。但是，在业务中，我们还需要做一个改进，这个改进是基于我要配合的业务特性决定的。在具体的业务中，我们的功能主要是在一个滚动的栏位中显示5、6个游戏，而这个游戏列表更换速度很快（意味着上架下架很快），而刚上架的游戏我们希望更多机会曝光，一部分是为了给算法提供足够的数据，其次是这涉及到广告主的合作观感。如果单纯按照Wilson下限分数来做推荐排序的话，会出现的问题就是给予新上线的游戏的展示次数过低，所以在具体推荐的算法中，我设计了一个临界曝光次数来考虑这个问题。在临界曝光次数以下，我们按照Wilson的上限分数来算；超过则按下限；在曝光很少次数时，其分数固定在1，即必定给曝光机会。这样就符合了我们这个业务需要的场景，具体实现如下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">W_adjust</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">n1</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">n2</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="n">n1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.</span>
+    <span class="k">elif</span> <span class="n">n1</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="n">n2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">W</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">confidence</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">W</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">confidence</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div></div>
+
+<h3 id="还能做什么改进">还能做什么改进</h3>
+
+<p>当然，以上的做法可能还涉及到一个时间上下文的问题，就是因为我们主营的小游戏版本迭代很快，并且和广告主的合作变更也很快，这使得过早的点击数据已经不太起作用了，最初的解决方案有两个：1. 基于反比函数（或其他递减函数）来重新计算点击数的值，使得过早以前的点击数对最后的比重影响降低；2. 只选择固定窗口的最新的点击数据作为样本总体。</p>
+
+<p>最后，我们选择了第二号方案，一部分原因是公司在设备算力上的不足，计算过于久远的Query可能计算过慢；第二原因是，对点击数做一些变化之后，可能丧失了分数的统计学意义。基于这两个理由，我们做出了最后的方案。</p>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2022-01-04T15:31:30+08:00" itemprop="datePublished">Jan 4, 2022</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%83%AD%E9%97%A8%E6%8E%A8%E8%8D%90">热门推荐</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E6%95%B0%E6%8D%AE%E7%A7%91%E5%AD%A6">数据科学</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

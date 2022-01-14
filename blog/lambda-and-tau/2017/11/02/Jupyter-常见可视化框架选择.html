@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>常见可视化框架选择 - 3Gee的博客</title>
+  <meta name="description" content="对于以Python作为技术栈的数据科学工作者，Jupyter是不得不提的数据报告工具。可能对于R社区而言，鼎鼎大名的ggplot2是常见的可视化框架，而大家对于Python，以及Jupyter为核心的交互式报告的可个视化方案就并没有那么熟悉。本文试图比较几个常用的解决方案，方便大家选择。">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2017/11/02/Jupyter-%E5%B8%B8%E8%A7%81%E5%8F%AF%E8%A7%86%E5%8C%96%E6%A1%86%E6%9E%B6%E9%80%89%E6%8B%A9.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">常见可视化框架选择</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <p>对于以Python作为技术栈的数据科学工作者，<code class="language-plaintext highlighter-rouge">Jupyter</code>是不得不提的数据报告工具。可能对于R社区而言，鼎鼎大名的<code class="language-plaintext highlighter-rouge">ggplot2</code>是常见的可视化框架，而大家对于Python，以及<code class="language-plaintext highlighter-rouge">Jupyter</code>为核心的交互式报告的可个视化方案就并没有那么熟悉。本文试图比较几个常用的解决方案，方便大家选择。</p>
+
+<h2 id="选择标准">选择标准</h2>
+
+<h3 id="称述式还是命令式">称述式还是命令式</h3>
+
+<p>数据工作者使用的图的类别，常见的就三类：GIS可视化、网络可视化和统计图。因此，大多数场景下，我们并不想接触非常底层的基于点、线、面的命令，所以，选择一个好的封装的框架相当重要。</p>
+
+<p>当然，公认较好的封装是基于<a href="https://www.amazon.com/Grammar-Graphics-Statistics-Computing/dp/0387245448">《The Grammar of Graphics (Statistics and Computing)》</a>一书，R中的<code class="language-plaintext highlighter-rouge">ggplot2</code>基本上就是一个很好的实现。我们基本上可以像用「自然语言」（Natural Language）一样使用这些绘图命令。我们姑且采用计算机科学领域的「陈述式」来表达这种绘图方式。</p>
+
+<p>相反，有时候，以下情形时，我们可能对于这种绘图命令可能并不在意：</p>
+
+<ol>
+  <li>出图相当简单，要求绘制速度，一般大的框架较重（当然只是相对而言）；</li>
+  <li>想要对细节做非常详尽的微调，一般大框架在微调方面会相对复杂或者退缩成一句句命令；</li>
+  <li>是统计作图可视化的创新者，想要尝试做出新的可视化实践。</li>
+</ol>
+
+<p>这些情况下，显然，简单操作式并提供底层绘制命令的框架更让人愉快，与上面类似，我们借用「命令式」描述这类框架。</p>
+
+<h3 id="是否交互">是否交互</h3>
+
+<p>与传统的交付静态图标不同，基于Web端的<code class="language-plaintext highlighter-rouge">Jupter</code>的一大好处就是可以绘制交互的图标（最近的<code class="language-plaintext highlighter-rouge">RNotebook</code>也有实现），因此，是否选择交互式，也是一个需要权衡的地方。</p>
+
+<p>交互图的优势：</p>
+
+<ol>
+  <li>可以提供更多的数据维度和信息；</li>
+  <li>用户端可以做更多诸如放大、选取、转存的操作；</li>
+  <li>可以交付BI工程师相应的JavaScript代码用以工程化；</li>
+  <li>效果上比较炫酷，考虑到报告接受者的特征可以选择。</li>
+</ol>
+
+<p>非交互图的优势：</p>
+
+<ol>
+  <li>报告文件直接导出成静态文件时相对问题，不会因为转换而损失信息；</li>
+  <li>图片可以与报告分离，必要时作为其他工作的成果；</li>
+  <li>不需要在运行Notebook时花很多世界载入各类前端框架。</li>
+</ol>
+
+<h3 id="是非内核交互">是非内核交互</h3>
+
+<p><code class="language-plaintext highlighter-rouge">Jupyter</code>上大多数命令通过以下方式获取数据，而大多数绘图方式事实上只是通过Notebook内的代码在Notebook与内核交互后展示出输出结果。但<code class="language-plaintext highlighter-rouge">ipywidgets</code>框架则可以实现Code Cell中的代码与Notebook中的前端控件（比如按钮等）绑定来进行操作内核，提供不同的绘图结果，甚至某些绘图框架的每个元素都可以直接和内核进行交互。</p>
+
+<p><img src="https://segmentfault.com/img/bVXNZw?w=633&amp;h=357" alt="clipboard.png" /></p>
+
+<p>​</p>
+
+<p>用这些框架，可以搭建更复杂的Notebook的可视化应用，但缺点是因为基于内核，所以在呈递、展示报告时如果使用离线文件时，这些交互就会无效。</p>
+
+<h2 id="框架罗列">框架罗列</h2>
+
+<h3 id="matplotlib"><code class="language-plaintext highlighter-rouge">matplotlib</code></h3>
+
+<p>最家喻户晓的绘图框架是<a href="https://matplotlib.org/"><code class="language-plaintext highlighter-rouge">matplotlib</code></a>，它提供了几乎所有python内静态绘图框架的底层命令。如果按照上面对可视化框架的分法，<code class="language-plaintext highlighter-rouge">matplotlib</code>属于非交互式的的「命令式」作图框架。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## matplotlib代码示例
+</span><span class="kn">from</span> <span class="nn">pylab</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="p">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span><span class="n">endpoint</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">C</span><span class="p">,</span><span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">cos</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="p">.</span><span class="n">sin</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+<span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">C</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">S</span><span class="p">)</span>
+
+<span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXNZy?w=576&amp;h=432" alt="clipboard.png" /></p>
+
+<p>优点是相对较快，底层操作较多。缺点是语言繁琐，内置默认风格不够美观。</p>
+
+<blockquote>
+  <p><code class="language-plaintext highlighter-rouge">matplotlib</code>在jupyter中需要一些配置，可以展现更好的效果，详情参见<a href="https://zhuanlan.zhihu.com/p/26739300">这篇文章</a>.</p>
+</blockquote>
+
+<h3 id="ggplot和plotnine"><code class="language-plaintext highlighter-rouge">ggplot</code>和<code class="language-plaintext highlighter-rouge">plotnine</code></h3>
+
+<p>值得一说，对于R迁移过来的人来说，<a href="https://github.com/yhat/ggpy"><code class="language-plaintext highlighter-rouge">ggplot</code></a>和<a href="https://github.com/has2k1/plotnine"><code class="language-plaintext highlighter-rouge">plotnine</code></a>简直是福音，基本克隆了<code class="language-plaintext highlighter-rouge">ggplot2</code>所有语法。<strong>横向比较的话，<code class="language-plaintext highlighter-rouge">plotnine</code>的效果更好</strong>。这两个绘图包的底层依旧是<code class="language-plaintext highlighter-rouge">matplotlib</code>，因此，在引用时别忘了使用<code class="language-plaintext highlighter-rouge">%matplotlib inline</code>语句。值得一说的是<code class="language-plaintext highlighter-rouge">plotnine</code>也移植了<code class="language-plaintext highlighter-rouge">ggplot2</code>中良好的配置语法和逻辑。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## plotnine示例
+</span><span class="p">(</span><span class="n">ggplot</span><span class="p">(</span><span class="n">mtcars</span><span class="p">,</span> <span class="n">aes</span><span class="p">(</span><span class="s">'wt'</span><span class="p">,</span> <span class="s">'mpg'</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">'factor(gear)'</span><span class="p">))</span>
+ <span class="o">+</span> <span class="n">geom_point</span><span class="p">()</span>
+ <span class="o">+</span> <span class="n">stat_smooth</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">'lm'</span><span class="p">)</span>
+ <span class="o">+</span> <span class="n">facet_wrap</span><span class="p">(</span><span class="s">'~gear'</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXNZE?w=663&amp;h=385" alt="clipboard.png" /></p>
+
+<h3 id="seaborn"><code class="language-plaintext highlighter-rouge">Seaborn</code></h3>
+
+<p><a href="https://seaborn.pydata.org/"><code class="language-plaintext highlighter-rouge">seaborn</code></a>准确上说属于<code class="language-plaintext highlighter-rouge">matplotlib</code>的扩展包，在其上做了许多非常有用的封装，基本上可以满足大部分统计作图的需求，以<code class="language-plaintext highlighter-rouge">matplotlib</code>+<code class="language-plaintext highlighter-rouge">seaborn</code>基本可以满足大部分业务场景，语法也更加「陈述式」。</p>
+
+<p>缺点是封装较高，基本上API不提供的图就完全不可绘制，对于各类图的拼合也不适合；此外配置语句语法又回归「命令式」，相对复杂且不一致。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## seaborn示例
+</span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span><span class="p">;</span> <span class="n">sns</span><span class="p">.</span><span class="nb">set</span><span class="p">(</span><span class="n">color_codes</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">iris</span> <span class="o">=</span> <span class="n">sns</span><span class="p">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s">"iris"</span><span class="p">)</span>
+<span class="n">species</span> <span class="o">=</span> <span class="n">iris</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"species"</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="p">.</span><span class="n">clustermap</span><span class="p">(</span><span class="n">iris</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXNZM?w=745&amp;h=732" alt="clipboard.png" /></p>
+
+<h3 id="plotly"><code class="language-plaintext highlighter-rouge">plotly</code></h3>
+
+<p><code class="language-plaintext highlighter-rouge">plotly</code>是跨平台JavaScript交互式绘图包，由于开发者的核心是javascript，所以整个语法类似于写json配置，语法特质也介于「陈述式」和「命令式」之间，无服务版本是免费的。</p>
+
+<p>有点是学习成本不高，可以很快将语句移植到javascript版本；缺点是语言相对繁琐。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">##plotly示例
+</span><span class="kn">import</span> <span class="nn">plotly.plotly</span> <span class="k">as</span> <span class="n">py</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objs</span> <span class="k">as</span> <span class="n">go</span>
+
+<span class="c1"># Add data
+</span><span class="n">month</span> <span class="o">=</span> <span class="p">[</span><span class="s">'January'</span><span class="p">,</span> <span class="s">'February'</span><span class="p">,</span> <span class="s">'March'</span><span class="p">,</span> <span class="s">'April'</span><span class="p">,</span> <span class="s">'May'</span><span class="p">,</span> <span class="s">'June'</span><span class="p">,</span> <span class="s">'July'</span><span class="p">,</span>
+         <span class="s">'August'</span><span class="p">,</span> <span class="s">'September'</span><span class="p">,</span> <span class="s">'October'</span><span class="p">,</span> <span class="s">'November'</span><span class="p">,</span> <span class="s">'December'</span><span class="p">]</span>
+<span class="n">high_2000</span> <span class="o">=</span> <span class="p">[</span><span class="mf">32.5</span><span class="p">,</span> <span class="mf">37.6</span><span class="p">,</span> <span class="mf">49.9</span><span class="p">,</span> <span class="mf">53.0</span><span class="p">,</span> <span class="mf">69.1</span><span class="p">,</span> <span class="mf">75.4</span><span class="p">,</span> <span class="mf">76.5</span><span class="p">,</span> <span class="mf">76.6</span><span class="p">,</span> <span class="mf">70.7</span><span class="p">,</span> <span class="mf">60.6</span><span class="p">,</span> <span class="mf">45.1</span><span class="p">,</span> <span class="mf">29.3</span><span class="p">]</span>
+<span class="n">low_2000</span> <span class="o">=</span> <span class="p">[</span><span class="mf">13.8</span><span class="p">,</span> <span class="mf">22.3</span><span class="p">,</span> <span class="mf">32.5</span><span class="p">,</span> <span class="mf">37.2</span><span class="p">,</span> <span class="mf">49.9</span><span class="p">,</span> <span class="mf">56.1</span><span class="p">,</span> <span class="mf">57.7</span><span class="p">,</span> <span class="mf">58.3</span><span class="p">,</span> <span class="mf">51.2</span><span class="p">,</span> <span class="mf">42.8</span><span class="p">,</span> <span class="mf">31.6</span><span class="p">,</span> <span class="mf">15.9</span><span class="p">]</span>
+<span class="n">high_2007</span> <span class="o">=</span> <span class="p">[</span><span class="mf">36.5</span><span class="p">,</span> <span class="mf">26.6</span><span class="p">,</span> <span class="mf">43.6</span><span class="p">,</span> <span class="mf">52.3</span><span class="p">,</span> <span class="mf">71.5</span><span class="p">,</span> <span class="mf">81.4</span><span class="p">,</span> <span class="mf">80.5</span><span class="p">,</span> <span class="mf">82.2</span><span class="p">,</span> <span class="mf">76.0</span><span class="p">,</span> <span class="mf">67.3</span><span class="p">,</span> <span class="mf">46.1</span><span class="p">,</span> <span class="mf">35.0</span><span class="p">]</span>
+<span class="n">low_2007</span> <span class="o">=</span> <span class="p">[</span><span class="mf">23.6</span><span class="p">,</span> <span class="mf">14.0</span><span class="p">,</span> <span class="mf">27.0</span><span class="p">,</span> <span class="mf">36.8</span><span class="p">,</span> <span class="mf">47.6</span><span class="p">,</span> <span class="mf">57.7</span><span class="p">,</span> <span class="mf">58.9</span><span class="p">,</span> <span class="mf">61.2</span><span class="p">,</span> <span class="mf">53.3</span><span class="p">,</span> <span class="mf">48.5</span><span class="p">,</span> <span class="mf">31.0</span><span class="p">,</span> <span class="mf">23.6</span><span class="p">]</span>
+<span class="n">high_2014</span> <span class="o">=</span> <span class="p">[</span><span class="mf">28.8</span><span class="p">,</span> <span class="mf">28.5</span><span class="p">,</span> <span class="mf">37.0</span><span class="p">,</span> <span class="mf">56.8</span><span class="p">,</span> <span class="mf">69.7</span><span class="p">,</span> <span class="mf">79.7</span><span class="p">,</span> <span class="mf">78.5</span><span class="p">,</span> <span class="mf">77.8</span><span class="p">,</span> <span class="mf">74.1</span><span class="p">,</span> <span class="mf">62.6</span><span class="p">,</span> <span class="mf">45.3</span><span class="p">,</span> <span class="mf">39.9</span><span class="p">]</span>
+<span class="n">low_2014</span> <span class="o">=</span> <span class="p">[</span><span class="mf">12.7</span><span class="p">,</span> <span class="mf">14.3</span><span class="p">,</span> <span class="mf">18.6</span><span class="p">,</span> <span class="mf">35.5</span><span class="p">,</span> <span class="mf">49.9</span><span class="p">,</span> <span class="mf">58.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">58.6</span><span class="p">,</span> <span class="mf">51.7</span><span class="p">,</span> <span class="mf">45.2</span><span class="p">,</span> <span class="mf">32.2</span><span class="p">,</span> <span class="mf">29.1</span><span class="p">]</span>
+
+<span class="c1"># Create and style traces
+</span><span class="n">trace0</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">high_2014</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'High 2014'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(205, 12, 24)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">trace1</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">low_2014</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'Low 2014'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(22, 96, 167)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,)</span>
+<span class="p">)</span>
+<span class="n">trace2</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">high_2007</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'High 2007'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(205, 12, 24)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">dash</span> <span class="o">=</span> <span class="s">'dash'</span><span class="p">)</span> <span class="c1"># dash options include 'dash', 'dot', and 'dashdot'
+</span><span class="p">)</span>
+<span class="n">trace3</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">low_2007</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'Low 2007'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(22, 96, 167)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">dash</span> <span class="o">=</span> <span class="s">'dash'</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">trace4</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">high_2000</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'High 2000'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(205, 12, 24)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">dash</span> <span class="o">=</span> <span class="s">'dot'</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">trace5</span> <span class="o">=</span> <span class="n">go</span><span class="p">.</span><span class="n">Scatter</span><span class="p">(</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">month</span><span class="p">,</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">low_2000</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'Low 2000'</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'rgb(22, 96, 167)'</span><span class="p">),</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">dash</span> <span class="o">=</span> <span class="s">'dot'</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">trace0</span><span class="p">,</span> <span class="n">trace1</span><span class="p">,</span> <span class="n">trace2</span><span class="p">,</span> <span class="n">trace3</span><span class="p">,</span> <span class="n">trace4</span><span class="p">,</span> <span class="n">trace5</span><span class="p">]</span>
+
+<span class="c1"># Edit the layout
+</span><span class="n">layout</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="s">'Average High and Low Temperatures in New York'</span><span class="p">,</span>
+              <span class="n">xaxis</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="s">'Month'</span><span class="p">),</span>
+              <span class="n">yaxis</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="s">'Temperature (degrees F)'</span><span class="p">),</span>
+              <span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">py</span><span class="p">.</span><span class="n">iplot</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s">'styled-line'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXNZW?w=2126&amp;h=1040" alt="clipboard.png" /></p>
+
+<blockquote>
+  <p>注意：此框架在jupyter中使用需要使用init_notebook_mode()加载JavaScript框架。</p>
+</blockquote>
+
+<h3 id="bokeh"><code class="language-plaintext highlighter-rouge">bokeh</code></h3>
+
+<p><code class="language-plaintext highlighter-rouge">bokeh</code>是<code class="language-plaintext highlighter-rouge">pydata</code>维护的比较具有潜力的开源交互可视化框架。</p>
+
+<p>值得一说的是，该框架同时提供底层语句和「陈述式」绘图命令。相对来说语法也比较清楚，但其配置语句依旧有很多可视化框架的问题，就是与「陈述式」命令不符，没有合理的结构。此外，一些常见的交互效果都是以底层命令的方式使用的，因此如果要快速实现Dashboard或者作图时就显得较为不便了。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## Bokeh示例
+</span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">scipy.special</span>
+
+<span class="kn">from</span> <span class="nn">bokeh.layouts</span> <span class="kn">import</span> <span class="n">gridplot</span>
+<span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="kn">import</span> <span class="n">figure</span><span class="p">,</span> <span class="n">show</span><span class="p">,</span> <span class="n">output_file</span>
+
+<span class="n">p1</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">"Normal Distribution (μ=0, σ=0.5)"</span><span class="p">,</span><span class="n">tools</span><span class="o">=</span><span class="s">"save"</span><span class="p">,</span>
+            <span class="n">background_fill_color</span><span class="o">=</span><span class="s">"#E8DDCB"</span><span class="p">)</span>
+
+<span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span>
+
+<span class="n">measured</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">hist</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">measured</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">pdf</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="p">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">cdf</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">scipy</span><span class="p">.</span><span class="n">special</span><span class="p">.</span><span class="n">erf</span><span class="p">((</span><span class="n">x</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span><span class="o">/</span><span class="mi">2</span>
+
+<span class="n">p1</span><span class="p">.</span><span class="n">quad</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="n">hist</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+        <span class="n">fill_color</span><span class="o">=</span><span class="s">"#036564"</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#033649"</span><span class="p">)</span>
+<span class="n">p1</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#D95B43"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"PDF"</span><span class="p">)</span>
+<span class="n">p1</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">cdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"white"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"CDF"</span><span class="p">)</span>
+
+<span class="n">p1</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">location</span> <span class="o">=</span> <span class="s">"center_right"</span>
+<span class="n">p1</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s">"darkgrey"</span>
+<span class="n">p1</span><span class="p">.</span><span class="n">xaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'x'</span>
+<span class="n">p1</span><span class="p">.</span><span class="n">yaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'Pr(x)'</span>
+
+
+
+<span class="n">p2</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">"Log Normal Distribution (μ=0, σ=0.5)"</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="s">"save"</span><span class="p">,</span>
+            <span class="n">background_fill_color</span><span class="o">=</span><span class="s">"#E8DDCB"</span><span class="p">)</span>
+
+<span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span>
+
+<span class="n">measured</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">lognormal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">hist</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">measured</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">pdf</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="p">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">np</span><span class="p">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">cdf</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">scipy</span><span class="p">.</span><span class="n">special</span><span class="p">.</span><span class="n">erf</span><span class="p">((</span><span class="n">np</span><span class="p">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">sigma</span><span class="p">)))</span><span class="o">/</span><span class="mi">2</span>
+
+<span class="n">p2</span><span class="p">.</span><span class="n">quad</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="n">hist</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+        <span class="n">fill_color</span><span class="o">=</span><span class="s">"#036564"</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#033649"</span><span class="p">)</span>
+<span class="n">p2</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#D95B43"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"PDF"</span><span class="p">)</span>
+<span class="n">p2</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">cdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"white"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"CDF"</span><span class="p">)</span>
+
+<span class="n">p2</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">location</span> <span class="o">=</span> <span class="s">"center_right"</span>
+<span class="n">p2</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s">"darkgrey"</span>
+<span class="n">p2</span><span class="p">.</span><span class="n">xaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'x'</span>
+<span class="n">p2</span><span class="p">.</span><span class="n">yaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'Pr(x)'</span>
+
+
+
+<span class="n">p3</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">"Gamma Distribution (k=1, θ=2)"</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="s">"save"</span><span class="p">,</span>
+            <span class="n">background_fill_color</span><span class="o">=</span><span class="s">"#E8DDCB"</span><span class="p">)</span>
+
+<span class="n">k</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span>
+
+<span class="n">measured</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">gamma</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">hist</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">measured</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">pdf</span> <span class="o">=</span> <span class="n">x</span><span class="o">**</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="o">/</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">theta</span><span class="o">**</span><span class="n">k</span> <span class="o">*</span> <span class="n">scipy</span><span class="p">.</span><span class="n">special</span><span class="p">.</span><span class="n">gamma</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
+<span class="n">cdf</span> <span class="o">=</span> <span class="n">scipy</span><span class="p">.</span><span class="n">special</span><span class="p">.</span><span class="n">gammainc</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="o">/</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">scipy</span><span class="p">.</span><span class="n">special</span><span class="p">.</span><span class="n">gamma</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+<span class="n">p3</span><span class="p">.</span><span class="n">quad</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="n">hist</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+        <span class="n">fill_color</span><span class="o">=</span><span class="s">"#036564"</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#033649"</span><span class="p">)</span>
+<span class="n">p3</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#D95B43"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"PDF"</span><span class="p">)</span>
+<span class="n">p3</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">cdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"white"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"CDF"</span><span class="p">)</span>
+
+<span class="n">p3</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">location</span> <span class="o">=</span> <span class="s">"center_right"</span>
+<span class="n">p3</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s">"darkgrey"</span>
+<span class="n">p3</span><span class="p">.</span><span class="n">xaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'x'</span>
+<span class="n">p3</span><span class="p">.</span><span class="n">yaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'Pr(x)'</span>
+
+
+
+<span class="n">p4</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">"Weibull Distribution (λ=1, k=1.25)"</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="s">"save"</span><span class="p">,</span>
+            <span class="n">background_fill_color</span><span class="o">=</span><span class="s">"#E8DDCB"</span><span class="p">)</span>
+
+<span class="n">lam</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.25</span>
+
+<span class="n">measured</span> <span class="o">=</span> <span class="n">lam</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="p">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">k</span><span class="p">)</span>
+<span class="n">hist</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">measured</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">pdf</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span><span class="o">/</span><span class="n">lam</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">lam</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="p">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">lam</span><span class="p">)</span><span class="o">**</span><span class="n">k</span><span class="p">)</span>
+<span class="n">cdf</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="p">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">lam</span><span class="p">)</span><span class="o">**</span><span class="n">k</span><span class="p">)</span>
+
+<span class="n">p4</span><span class="p">.</span><span class="n">quad</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="n">hist</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+       <span class="n">fill_color</span><span class="o">=</span><span class="s">"#036564"</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#033649"</span><span class="p">)</span>
+<span class="n">p4</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"#D95B43"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"PDF"</span><span class="p">)</span>
+<span class="n">p4</span><span class="p">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">cdf</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s">"white"</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s">"CDF"</span><span class="p">)</span>
+
+<span class="n">p4</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">location</span> <span class="o">=</span> <span class="s">"center_right"</span>
+<span class="n">p4</span><span class="p">.</span><span class="n">legend</span><span class="p">.</span><span class="n">background_fill_color</span> <span class="o">=</span> <span class="s">"darkgrey"</span>
+<span class="n">p4</span><span class="p">.</span><span class="n">xaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'x'</span>
+<span class="n">p4</span><span class="p">.</span><span class="n">yaxis</span><span class="p">.</span><span class="n">axis_label</span> <span class="o">=</span> <span class="s">'Pr(x)'</span>
+
+
+
+<span class="n">output_file</span><span class="p">(</span><span class="s">'histogram.html'</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">"histogram.py example"</span><span class="p">)</span>
+
+<span class="n">show</span><span class="p">(</span><span class="n">gridplot</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">p4</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">plot_width</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">plot_height</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">toolbar_location</span><span class="o">=</span><span class="bp">None</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXNZ6?w=1722&amp;h=1622" alt="clipboard.png" /></p>
+
+<h2 id="bqplot"><code class="language-plaintext highlighter-rouge">bqplot</code></h2>
+
+<p><a href="https://github.com/bloomberg/bqplot"><code class="language-plaintext highlighter-rouge">bqplot</code></a>是基于<code class="language-plaintext highlighter-rouge">ipywidgets</code>和<code class="language-plaintext highlighter-rouge">d3.js</code>组合发展的内核交互式的可视化框架。语法上采用了和<code class="language-plaintext highlighter-rouge">matplotlib</code>大致一致的语法已经相对封装较高的「陈述式语法」。优点是直接和内核交互，可以使用大量控件来实现更多的图像处理，缺点也是直接的，离线文档则不会显示任何图案、控件也都失效。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">## bqplot示例
+</span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">from</span> <span class="nn">bqplot</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OrdinalScale</span><span class="p">,</span> <span class="n">LinearScale</span><span class="p">,</span> <span class="n">Bars</span><span class="p">,</span> <span class="n">Lines</span><span class="p">,</span> <span class="n">Axis</span><span class="p">,</span> <span class="n">Figure</span>
+<span class="p">)</span>
+
+<span class="n">size</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">arange</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+<span class="n">x_ord</span> <span class="o">=</span> <span class="n">OrdinalScale</span><span class="p">()</span>
+<span class="n">y_sc</span> <span class="o">=</span> <span class="n">LinearScale</span><span class="p">()</span>
+
+<span class="n">bar</span> <span class="o">=</span> <span class="n">Bars</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">scales</span><span class="o">=</span><span class="p">{</span><span class="s">'x'</span><span class="p">:</span> <span class="n">x_ord</span><span class="p">,</span> <span class="s">'y'</span><span class="p">:</span>
+<span class="n">y_sc</span><span class="p">},</span> <span class="nb">type</span><span class="o">=</span><span class="s">'stacked'</span><span class="p">)</span>
+<span class="n">line</span> <span class="o">=</span> <span class="n">Lines</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="n">randn</span><span class="p">(</span><span class="n">size</span><span class="p">),</span> <span class="n">scales</span><span class="o">=</span><span class="p">{</span><span class="s">'x'</span><span class="p">:</span> <span class="n">x_ord</span><span class="p">,</span> <span class="s">'y'</span><span class="p">:</span> <span class="n">y_sc</span><span class="p">},</span>
+             <span class="n">stroke_width</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="p">[</span><span class="s">'red'</span><span class="p">],</span> <span class="n">display_legend</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s">'Line chart'</span><span class="p">])</span>
+
+<span class="n">ax_x</span> <span class="o">=</span> <span class="n">Axis</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">x_ord</span><span class="p">,</span> <span class="n">grid_lines</span><span class="o">=</span><span class="s">'solid'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">'X'</span><span class="p">)</span>
+<span class="n">ax_y</span> <span class="o">=</span> <span class="n">Axis</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">y_sc</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s">'vertical'</span><span class="p">,</span> <span class="n">tick_format</span><span class="o">=</span><span class="s">'0.2f'</span><span class="p">,</span>
+            <span class="n">grid_lines</span><span class="o">=</span><span class="s">'solid'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">'Y'</span><span class="p">)</span>
+
+<span class="n">Figure</span><span class="p">(</span><span class="n">marks</span><span class="o">=</span><span class="p">[</span><span class="n">bar</span><span class="p">,</span> <span class="n">line</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="n">ax_x</span><span class="p">,</span> <span class="n">ax_y</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s">'API Example'</span><span class="p">,</span>
+       <span class="n">legend_location</span><span class="o">=</span><span class="s">'bottom-right'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><img src="https://segmentfault.com/img/bVXN0d?w=1624&amp;h=1020" alt="ss" /></p>
+
+<h3 id="其他特殊需求的作图">其他特殊需求的作图</h3>
+
+<p>除了统计作图，网络可视化和GIS可视化也是很常用的，在此只做一个简单的罗列：</p>
+
+<p>GIS类：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">gmap</code>：交互，使用google maps接口</li>
+  <li><code class="language-plaintext highlighter-rouge">ipyleaflet</code>：交互，使用leaflet接口</li>
+</ul>
+
+<p>网络类：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">networkx</code>：底层为<code class="language-plaintext highlighter-rouge">matplotlib</code></li>
+  <li><code class="language-plaintext highlighter-rouge">plotly</code></li>
+</ul>
+
+<h2 id="总结">总结</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">底层实现</th>
+      <th>交互方式</th>
+      <th style="text-align: center">语法</th>
+      <th style="text-align: center">语言结构</th>
+      <th>备注</th>
+      <th style="text-align: left">推荐程度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">matplotlib</code></td>
+      <td style="text-align: center">-</td>
+      <td>无</td>
+      <td style="text-align: center">命令式</td>
+      <td style="text-align: center">底层语言</td>
+      <td>可以实现复杂底层操作</td>
+      <td style="text-align: left">★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">gglot</code></td>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">matplotlib</code></td>
+      <td>无</td>
+      <td style="text-align: center">陈述式</td>
+      <td style="text-align: center">类<code class="language-plaintext highlighter-rouge">ggplot2</code></td>
+      <td>建议选择<code class="language-plaintext highlighter-rouge">plotnine</code></td>
+      <td style="text-align: left">★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">plotnine</code></td>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">matplotlib</code></td>
+      <td>无</td>
+      <td style="text-align: center">陈述式</td>
+      <td style="text-align: center">类<code class="language-plaintext highlighter-rouge">ggplot2</code></td>
+      <td>完全移植<code class="language-plaintext highlighter-rouge">ggplot2</code></td>
+      <td style="text-align: left">★★★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">seaborn</code></td>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">matplotlib</code></td>
+      <td>无</td>
+      <td style="text-align: center">陈述式</td>
+      <td style="text-align: center">高级语言</td>
+      <td>有很多有用的统计图类的封装；但不适合做图拼装</td>
+      <td style="text-align: left">★★★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">plotly</code></td>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">plotly.js</code></td>
+      <td>前端交互</td>
+      <td style="text-align: center">介于命令式和陈述式之间</td>
+      <td style="text-align: center">类似JavaScript</td>
+      <td>语法类似于json配置</td>
+      <td style="text-align: left">★★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">bokeh</code></td>
+      <td style="text-align: center">-</td>
+      <td>前端交互</td>
+      <td style="text-align: center">命令、陈述式</td>
+      <td style="text-align: center">同时有底层语言和高级语言</td>
+      <td>社区具有潜力</td>
+      <td style="text-align: left">★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">bqplot</code></td>
+      <td style="text-align: center"><code class="language-plaintext highlighter-rouge">d3.js</code></td>
+      <td>内核交互</td>
+      <td style="text-align: center">命令、陈述式</td>
+      <td style="text-align: center">有类似<code class="language-plaintext highlighter-rouge">matplotlib</code>底层语言，已经封装好的高级语言</td>
+      <td>内核交互</td>
+      <td style="text-align: left">★★★★</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td> </td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td> </td>
+      <td style="text-align: left"> </td>
+    </tr>
+  </tbody>
+</table>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2017-11-02T12:05:53+08:00" itemprop="datePublished">Nov 2, 2017</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%8F%AF%E8%A7%86%E5%8C%96">可视化</a></li>
+      
+      <li><a class="tag-link" href="/tags/ggplot2">ggplot2</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

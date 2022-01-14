@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>用户行为与生存分析 - 3Gee的博客</title>
+  <meta name="description" content="生存分析的来历">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2018/08/06/%E7%94%A8%E6%88%B7%E8%A1%8C%E4%B8%BA%E4%B8%8E%E7%94%9F%E5%AD%98%E5%88%86%E6%9E%90.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">用户行为与生存分析</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <h2 id="生存分析的来历">生存分析的来历</h2>
+
+<p>生存分析（Survival Analysis）来源于基础医学领域，最早用来研究各种治疗方案对病人寿命的影响。而寿命则用一个<strong>end event</strong>（死亡）的方式衡量。基本定义如下：</p>
+
+<p>T为标记事件发生的时间。</p>
+
+<ul>
+  <li>
+    <p><strong>生存函数</strong>（Survival Function）。用来描述<strong>未发生end event的样本的比例随时间变化的趋势</strong>。
+\(S(t) = P(T &gt; t)\)</p>
+  </li>
+  <li>
+    <p><strong>Hazard函数</strong>(Hazard Function)。描述<strong>end event发生的概率变化率</strong>。
+\(\lambda (t)  = {lim}_{h\to 0} \frac{P(t \le T &lt; t + h | T \ge t)}{h}\)</p>
+  </li>
+  <li>
+    <p>两个函数之间的关系:
+\(S(t) = e^{-\int_{0}^t \lambda (s)ds}\)</p>
+  </li>
+</ul>
+
+<h2 id="生存分析与新用户行为">生存分析与新用户行为</h2>
+
+<p>然而，生存分析的定义本身让它和很多用户行为事件本身发生联系。譬如，用户流失和生存分析研究的概念完全一致，而常见的流失分析，可能会存在以下问题：</p>
+
+<ol>
+  <li>无法提供每一个时刻流失发生的概率</li>
+  <li>很难具有预测性</li>
+  <li>多个产品/A-B testing时很难互相做出定量比较。</li>
+</ol>
+
+<p>而生存分析本身就会对以上三个内容做出预测，此外，对<strong>Customer Lifetime Value</strong>能提出一些更有价值的洞识。</p>
+
+<p>但本文试图扩展生存分析的试用范围，任何具有触发时间特征的事件，都可以采用生存分析的方式做出分析，譬如：</p>
+
+<ol>
+  <li>用户留存</li>
+  <li>用户转化</li>
+  <li>用户点击</li>
+  <li>…</li>
+</ol>
+
+<p>本文以常见的<strong>购买行为</strong>的转化为例，介绍生存分析的某些应用。</p>
+
+<h2 id="用户转化">用户转化</h2>
+
+<blockquote>
+  <p>代码以<code class="language-plaintext highlighter-rouge">jupyter notebook</code>的形式放在<a href="https://github.com/threecifanggen/lambda-and-tau/blob/master/%E7%94%9F%E5%AD%98%E5%88%86%E6%9E%90-%E4%B8%80%E4%B8%AA%E5%AE%9E%E4%BE%8B/survival_function_for_user_conversion.ipynb">github这里</a>。</p>
+</blockquote>
+
+<h3 id="前期构思">前期构思</h3>
+
+<p>本实例是研究，用户从注册时开始，随时间变化其转化率会有何种变化，考虑届时提供一些运营策略。常规计算本任务转化率的方式是：</p>
+
+<p>转化率 = # 转化用户数 / # 总用户数数</p>
+
+<p>这个转化率往往很难提供更多的洞识，我们无法给出自动化运营可以介入的时间要素。而生存分析从本质上说，恰恰是研究一个<strong>发生事件</strong>的概率随时间发生的变化，在此项任务中，<strong>事件</strong>显然就是<strong>转化</strong>。基于这种思想，我们做出如下分析。</p>
+
+<h3 id="数据样例">数据样例</h3>
+
+<p>生存分析需要以一个用户为单位，提取<strong>参与实验的时间</strong>(这里就是注册时间)，<strong>终止实验/end event发生时间</strong>(这里就是指数据采集的截止日期和用户发生转化的时间)，以及最后是否发生end event的标记。</p>
+
+<p>因此我们采集了如下数据。其中<code class="language-plaintext highlighter-rouge">sex</code>，<code class="language-plaintext highlighter-rouge">birth_year</code>，<code class="language-plaintext highlighter-rouge">province</code>三个字段用以后面的分析，<code class="language-plaintext highlighter-rouge">duration</code>则是到事件发生时总共花费的时间，即<code class="language-plaintext highlighter-rouge">test_last_time - signup_time</code>。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: right"> </th>
+      <th style="text-align: right">user_id</th>
+      <th style="text-align: left">signup_time</th>
+      <th style="text-align: left">end_time</th>
+      <th style="text-align: left">test_last_time</th>
+      <th style="text-align: left">buy_time</th>
+      <th style="text-align: left">sex</th>
+      <th style="text-align: right">birth_year</th>
+      <th style="text-align: left">province</th>
+      <th style="text-align: left">have_bought</th>
+      <th style="text-align: right">duration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: right">0</td>
+      <td style="text-align: right">513336</td>
+      <td style="text-align: left">2017-10-30 21:58:04.323000</td>
+      <td style="text-align: left">2017-10-30 22:03:54.430000</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">2017-10-30 22:03:54.430000</td>
+      <td style="text-align: left">女</td>
+      <td style="text-align: right">1991</td>
+      <td style="text-align: left">山东</td>
+      <td style="text-align: left">True</td>
+      <td style="text-align: right">0.00405216</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">1</td>
+      <td style="text-align: right">513340</td>
+      <td style="text-align: left">2017-10-30 22:14:35.853000</td>
+      <td style="text-align: left">2017-10-30 22:45:10.243000</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">2017-10-30 22:45:10.243000</td>
+      <td style="text-align: left">男</td>
+      <td style="text-align: right">1988</td>
+      <td style="text-align: left">安徽</td>
+      <td style="text-align: left">True</td>
+      <td style="text-align: right">0.0212314</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">2</td>
+      <td style="text-align: right">513353</td>
+      <td style="text-align: left">2017-10-31 07:29:04.293000</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">NaT</td>
+      <td style="text-align: left">nan</td>
+      <td style="text-align: right">nan</td>
+      <td style="text-align: left">nan</td>
+      <td style="text-align: left">False</td>
+      <td style="text-align: right">212.688</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">3</td>
+      <td style="text-align: right">513370</td>
+      <td style="text-align: left">2017-10-31 10:45:45.586000</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">NaT</td>
+      <td style="text-align: left">女</td>
+      <td style="text-align: right">1979</td>
+      <td style="text-align: left">河南</td>
+      <td style="text-align: left">False</td>
+      <td style="text-align: right">212.552</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">4</td>
+      <td style="text-align: right">513387</td>
+      <td style="text-align: left">2017-10-31 13:00:32.360000</td>
+      <td style="text-align: left">2017-10-31 13:09:38.100000</td>
+      <td style="text-align: left">2018-06-01 00:00:00</td>
+      <td style="text-align: left">2017-10-31 13:09:38.100000</td>
+      <td style="text-align: left">女</td>
+      <td style="text-align: right">1992</td>
+      <td style="text-align: left">山东</td>
+      <td style="text-align: left">True</td>
+      <td style="text-align: right">0.00631644</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="分析转化率随注册后时间发生的变化">分析转化率随注册后时间发生的变化</h3>
+
+<p><code class="language-plaintext highlighter-rouge">Python</code>比较完整的支持生存分析的包是<a href="https://lifelines.readthedocs.io/en/latest/"><code class="language-plaintext highlighter-rouge">Liflines</code></a>和<a href="https://github.com/sebp/scikit-survival"><code class="language-plaintext highlighter-rouge">scikit-survival</code></a>。两者之间，对分析友好的方案是前者，我们在本博文中，也主要采用该模块进行分析。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">lifelines</span> <span class="kn">import</span> <span class="n">NelsonAalenFitter</span><span class="p">,</span> <span class="n">CoxPHFitter</span><span class="p">,</span> <span class="n">KaplanMeierFitter</span>
+<span class="kn">from</span> <span class="nn">lifelines.statistics</span> <span class="kn">import</span> <span class="n">logrank_test</span>
+</code></pre></div></div>
+
+<p>首先，我们需要查看用户的<strong>未转化率</strong>（有点绕口），这直接可以用生存分析本身的定义来实现。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">kmf</span> <span class="o">=</span> <span class="n">KaplanMeierFitter</span><span class="p">()</span>
+<span class="n">kmf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s">'all'</span><span class="p">)</span>
+<span class="n">kmf</span><span class="p">.</span><span class="n">plot</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805225520337.png" alt="image-20180805225520337" /></p>
+
+<p>显然，我们可以发现，在50天后，基本上变化不明显了，最初的50天内，用40%多的用户发生转化。当然，这一图示并不直观，我们可以用<code class="language-plaintext highlighter-rouge">1 - 未转化率=转化率</code>的方式来重新绘制<strong>转化率曲线</strong>。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">kmf</span><span class="p">.</span><span class="n">survival_function_</span><span class="p">).</span><span class="n">plot</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805230116015.png" alt="image-20180805230116015" /></p>
+
+<p>显然，这张图已经可以参与到运营决策中取了，图中显示，用户会在前10天内转化，后期变化不在明显。但我们可以通过生存分析得到更多有意思的结论。</p>
+
+<p>一个例子就是分析不同产品的生存曲线图来分析产品之间的好坏（在此不做示范），一个就是用户本身特征对转化的影响。在此，我们以性别为例，分析性别对用户更早决定购买产品/转化之间有何有何关系。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ax</span> <span class="o">=</span> <span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">51</span><span class="p">)</span>
+<span class="n">kmf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'男'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'男'</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">timeline</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">"male"</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">kmf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+<span class="n">kmf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'女'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'女'</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">timeline</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">"female"</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">kmf</span><span class="p">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="p">.</span><span class="n">title</span><span class="p">(</span><span class="s">"not buying rate between two gender"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805230614522.png" alt="image-20180805230614522" /></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ax</span> <span class="o">=</span> <span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">51</span><span class="p">)</span>
+<span class="n">kmf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'男'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'男'</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">timeline</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">"male"</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">kmf</span><span class="p">.</span><span class="n">survival_function_</span><span class="p">).</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+<span class="n">kmf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'女'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span> <span class="o">==</span> <span class="s">'女'</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">timeline</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">"female"</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">kmf</span><span class="p">.</span><span class="n">survival_function_</span><span class="p">).</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="p">.</span><span class="n">title</span><span class="p">(</span><span class="s">"conversion rate between two gender"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805230718723.png" alt="image-20180805230718723" /></p>
+
+<p>显然，我们从图中可以发现，女性更倾向于更快相信此产品，更早时间并且更多比例的发现转化。接下来，我们可以利用自带的<code class="language-plaintext highlighter-rouge">log-rank test</code>对两者是否差异显著做预测。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">logrank_test</span><span class="p">(</span><span class="n">event_times_A</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span><span class="o">==</span><span class="s">'男'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed_A</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span><span class="o">==</span><span class="s">'男'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span>
+            <span class="n">event_times_B</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span><span class="o">==</span><span class="s">'女'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed_B</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">'sex'</span><span class="p">]</span><span class="o">==</span><span class="s">'女'</span><span class="p">][</span><span class="s">'duration'</span><span class="p">])</span>
+</code></pre></div></div>
+
+<pre><code class="language-raw">&lt;lifelines.StatisticalResult: 
+
+t_0=-1, alpha=0.95, null_distribution=chi squared, df=1
+
+test_statistic      p     
+       82.2898 0.0000  ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+&gt;
+</code></pre>
+
+<p>显然，差异是显著的。</p>
+
+<h3 id="分析转化率的变化率">分析转化率的变化率</h3>
+
+<p>在此，我们使用<code class="language-plaintext highlighter-rouge">Nelson Aslen</code>方法分析转化率的变化率随时间的变化（即Hazard函数）。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">naf</span> <span class="o">=</span> <span class="n">NelsonAalenFitter</span><span class="p">()</span>
+<span class="n">naf</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s">'have_bought'</span><span class="p">],</span> <span class="n">timeline</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">'all'</span><span class="p">)</span>
+<span class="n">naf</span><span class="p">.</span><span class="n">plot_hazard</span><span class="p">(</span><span class="n">bandwidth</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805231451494.png" alt="image-20180805231451494" /></p>
+
+<p>图中可以看出，转化率的变化在前5天内略微提高，随后断崖式减少，大概在20天左右区域和缓。换用运营的术语，前五天内用户对产品的信任度略微增加，使得更有可能购买产品；但超过五天还没有购买意愿的人，购买发生的可能性随时间递减。</p>
+
+<p>一个可能的运营策略就是在第5天做出一些行为，增加用户的购买意愿，从而达到提高用户的生命周期的总价值。</p>
+
+<p>当然，我们如同上面板块一样，也不叫一下性别差异。</p>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805231922162.png" alt="image-20180805231922162" /></p>
+
+<p>显然，女性建立信任的速度更快，但是大致都是以5天为界，在5天时没有发生购买行为，后期发生的概率会越来越小。</p>
+
+<h3 id="生存分析的回归分析">生存分析的回归分析</h3>
+
+<p>在此，我们还介绍一种对于不同变量对生存曲线影响的分析方法，并可以作为预测用户是否可能发生转化的模型——<code class="language-plaintext highlighter-rouge">Cox PH</code>模型。其基本假设是：</p>
+
+\[\lambda (t, X) = \lambda_0(t) exp(\beta X)\]
+
+<p>即假设待研究的变量不影响到生存模型的形状，而形状只有独立的\(\lambda_0(t)\)决定（即只和时间有关）。对此，我们需要对变量进行形状上的验证来判断该模型的有效性。在此我们只做性别和用户年龄的回归分析。</p>
+
+<p>上面已经验证过性别的转化率的形状，我们使用双对数绘制对年龄（出生年）的影响。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">kmf0</span> <span class="o">=</span> <span class="n">KaplanMeierFitter</span><span class="p">()</span>
+<span class="n">kmf0</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cph_train_df</span><span class="p">[</span><span class="n">cph_train_df</span><span class="p">[</span><span class="s">'birth_year'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1960</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">cph_train_df</span><span class="p">[</span><span class="n">cph_train_df</span><span class="p">[</span><span class="s">'birth_year'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1960</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">])</span>
+
+<span class="n">kmf1</span> <span class="o">=</span> <span class="n">KaplanMeierFitter</span><span class="p">()</span>
+<span class="n">kmf1</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cph_train_df</span><span class="p">[</span><span class="n">cph_train_df</span><span class="p">[</span><span class="s">'birth_year'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1970</span><span class="p">][</span><span class="s">'duration'</span><span class="p">],</span> <span class="n">event_observed</span><span class="o">=</span><span class="n">cph_train_df</span><span class="p">[</span><span class="n">cph_train_df</span><span class="p">[</span><span class="s">'birth_year'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1970</span><span class="p">][</span><span class="s">'have_bought'</span><span class="p">])</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="p">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">kmf0</span><span class="p">.</span><span class="n">plot_loglogs</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
+<span class="n">kmf1</span><span class="p">.</span><span class="n">plot_loglogs</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
+
+<span class="n">axes</span><span class="p">.</span><span class="n">legend</span><span class="p">([</span><span class="s">'1960'</span><span class="p">,</span> <span class="s">'1970'</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805233353267.png" alt="image-20180805233024911" /></p>
+
+<p>结果不是很符合预设，但由于演示需要，<strong>假设数据符合我们的假定</strong>，而且我们仅做线性模型。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cph</span> <span class="o">=</span> <span class="n">CoxPHFitter</span><span class="p">()</span>
+<span class="n">cph</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cph_train_df</span><span class="p">,</span> <span class="n">duration_col</span><span class="o">=</span><span class="s">'duration'</span><span class="p">,</span> <span class="n">event_col</span><span class="o">=</span><span class="s">'have_bought'</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">cph</span><span class="p">.</span><span class="n">print_summary</span><span class="p">()</span>
+</code></pre></div></div>
+
+<pre><code class="language-raw">n=10000, number of events=7683
+
+              coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95     
+birth_year -0.0084     0.9916    0.0010 -8.7945 0.0000     -0.0103     -0.0066  ***
+sex        -0.1676     0.8457    0.0241 -6.9492 0.0000     -0.2149     -0.1203  ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+
+Concordance = 0.528
+Likelihood ratio test = 124.891 on 2 df, p=0.00000
+</code></pre>
+
+<p>我们可以发现，sex影响的项更大，参数都是显著的。之后，我们就可以用<code class="language-plaintext highlighter-rouge">cph</code>的相关函数对数据进行预测。我们在此用<code class="language-plaintext highlighter-rouge">plot_covariate_group</code>函数来展示不同属性的影响：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cph</span><span class="p">.</span><span class="n">plot_covariate_groups</span><span class="p">(</span><span class="s">'birth_year'</span><span class="p">,</span> <span class="p">[</span><span class="mi">1960</span><span class="p">,</span> <span class="mi">1970</span><span class="p">,</span> <span class="mi">1980</span><span class="p">,</span> <span class="mi">1990</span><span class="p">])</span>
+<span class="n">cph</span><span class="p">.</span><span class="n">plot_covariate_groups</span><span class="p">(</span><span class="s">'sex'</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805234322978.png" alt="image-20180805234322978" /></p>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20180805234340974.png" alt="image-20180805234340974" /></p>
+
+<p>显然，年龄越大、性别为女性越容易信任平台，更早的做出购买行为。</p>
+
+<h2 id="结语">结语</h2>
+
+<p>这里，我们用生存分析解决并使用在用户行为分析中。给出更多可能有助于运营以及理解用户画像的洞识结论。</p>
+
+<h2 id="references-and-recommending-reading-list">References and Recommending Reading List</h2>
+
+<ul>
+  <li><a href="https://www.youtube.com/watch?v=oui1hx2bM2o&amp;t=2s">Tristan Boudreault Survival analysis for conversion rates</a></li>
+  <li><a href="https://arxiv.org/pdf/1701.02359">Playtime Measurement with Survival Analysis https://arxiv.org/pdf/1701.02359</a></li>
+  <li><a href="https://www.bls.gov/ore/pdf/st060060.pdf">Using Survival Analysis to Predict Sample Retention Rates https://www.bls.gov/ore/pdf/st060060.pdf</a></li>
+  <li><a href="https://lifelines.readthedocs.io/en/latest/">Lifelines doc  readthedocs.io</a></li>
+  <li><a href="https://github.com/sebp/scikit-survival">scikit-survival github</a></li>
+</ul>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2018-08-06T12:05:53+08:00" itemprop="datePublished">Aug 6, 2018</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%94%9F%E5%AD%98%E5%88%86%E6%9E%90">生存分析</a></li>
+      
+      <li><a class="tag-link" href="/tags/Lifelines">Lifelines</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

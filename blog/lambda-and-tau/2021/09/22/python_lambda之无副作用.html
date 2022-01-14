@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python函数式编程系列001：无副作用 - 3Gee的博客</title>
+  <meta name="description" content="博客元年">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2021/09/22/python_lambda%E4%B9%8B%E6%97%A0%E5%89%AF%E4%BD%9C%E7%94%A8.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">Python函数式编程系列001：无副作用</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <h2 id="博客元年">博客元年</h2>
+
+<p>这个博客的目的本来是讨论数据（用\(\tau\)表示）和函数式编程/计算机科学(用\(\lambda\)表示)的两类主题的。但事实上，本博客还没写过任何关于<strong>函数式编程</strong>的内容，显得有些「名不副实」。而近几年在一些项目上和自己理论学习中的实践，对于函数式编程有了一些不大不小的洞识。希望能借由这个系列来给大家传递一些函数式编程非常有用的方法，以及更督促自己对这方面进行思考和学习。</p>
+
+<p>当然，介绍函数式编程的不错的博客/文章或者书籍，但是，因为<code class="language-plaintext highlighter-rouge">Python</code>在函数式编程方面的支持不算是非常好的（比如递归加速之类），所以以<code class="language-plaintext highlighter-rouge">Python</code>实现函数式编程的例子往往基于<code class="language-plaintext highlighter-rouge">functools</code>、<code class="language-plaintext highlighter-rouge">itertools</code>以及一些递归概念的介绍。所以这个博客系列试图弥补这方面的不足，并且将视野扩大，让我们在哲学、范畴学等领域的内容加入进来，进一步「元」思考编程本身。</p>
+
+<h2 id="何为函数">何为函数</h2>
+
+<p>当然，作为本系列的第一篇文章，我们要来讨论的是「无副作用」这个概念。</p>
+
+<p>首先，我们要回到一个思考，就是<code class="language-plaintext highlighter-rouge">Python</code>的<code class="language-plaintext highlighter-rouge">function(s)</code>是一个什么概念。<strong>function</strong>讨论最好当然是分析哲学的先驱弗雷泽（具体可参考下面的引用）。但我们具体抽象出来，数学上的函数有个明确的定义，即「一个自变量映射到唯一一个因变量」。也就是说，函数反复带入同一个值，理应这个结果是一致的。比如我们举下面一个例子，无论我们带入几次 <code class="language-plaintext highlighter-rouge">x = 1</code>都可以返回<code class="language-plaintext highlighter-rouge">2</code>的结果。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</code></pre></div></div>
+
+<p>也有书中（例如引用中提到的<em>Functional Programming in Scala</em>）也将这种原则表示为「符号代换原则」，即我们完全可以用声明函数的等式代换到下面的式子中。这个也是一个引申而来的判断是否是函数的例子，譬如：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+</code></pre></div></div>
+
+<p>这个例子中，我们完全可以使用下面的代换原则来实现。这个是<strong>数学定义的函数</strong>的最佳例子。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+</code></pre></div></div>
+
+<p>我们把上面这些明确符合数学定义的函数就叫做「无副作用」的，因为它们的计算只涉及到了计算自己的概念，并且所有符号，只是某一个值/函数的指示词，不带有别的意涵。</p>
+
+<h2 id="事实上python中的函数">事实上<code class="language-plaintext highlighter-rouge">Python</code>中的函数</h2>
+
+<p>但是事实上<code class="language-plaintext highlighter-rouge">Python</code>中永远允许我们定义一些不符合上面规范，但是<code class="language-plaintext highlighter-rouge">Python</code>术语中还是叫函数的东西，比如下面一个全局变量的例子：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">a</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">a</span>
+    <span class="n">a</span> <span class="o">+=</span> <span class="n">x</span>
+    <span class="k">return</span> <span class="n">a</span>
+</code></pre></div></div>
+
+<p>我们在两次带入<code class="language-plaintext highlighter-rouge">x = 1</code>时，结果第一次结果是<code class="language-plaintext highlighter-rouge">2</code>，第二次是<code class="language-plaintext highlighter-rouge">3</code>。这就不符合我们函数的定义了，而究其原因，它是改变了一个函数外的变量<code class="language-plaintext highlighter-rouge">a</code>，因此它除了计算之外，还改变了什么，我们于是说它是有「副作用」的。</p>
+
+<p>第二个产生的原因涉及可变变量，其实上面的<code class="language-plaintext highlighter-rouge">a</code>也是一个可变变量的例子。但是更加突出的乃是<code class="language-plaintext highlighter-rouge">list</code>、<code class="language-plaintext highlighter-rouge">dict</code>之类的可变变量或者原地操作的值，例如下面一个例子：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">ls</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+    <span class="n">ls</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ls</span>
+</code></pre></div></div>
+
+<p>在这个例子里，没有涉及操作全局变量，但是当我们带入了<code class="language-plaintext highlighter-rouge">ls = [1, 2, 3]</code>以及<code class="language-plaintext highlighter-rouge">a = 1</code>后，我们依旧发现每一次带入的时候，返回值还是不一样的。我们也可以把这种对于<code class="language-plaintext highlighter-rouge">ls</code>的改变表述为产生了副作用。如果我们仅仅是想得到<code class="language-plaintext highlighter-rouge">ls</code>加了一个元素后的结果，那么这个问题将显得非常严重。</p>
+
+<p><strong>SCIP</strong>(<em>Structure and Interpretation of Computer Programs</em>)一书中，非常好的概述了这两种思路处理函数的不同。在前者「无副作用」的例子里，<code class="language-plaintext highlighter-rouge">a</code>、<code class="language-plaintext highlighter-rouge">f</code>之类的东西，仅仅具有指示一个值/函数的意义；但是对于有「副作用」概念的后者的函数里，我们必须得构造一个「环境」的概念。这个环境里，有一个个屋子（在计算机里可能就是内存/CPU缓存的概念），<code class="language-plaintext highlighter-rouge">a</code>和<code class="language-plaintext highlighter-rouge">f</code>指示的是屋子（但有的时候又是指屋子里放的东西），更可怕的是，屋子的大小也会变化；而「无副作用」的例子里，我们只要知道符号永远指的是一个东西就好了，一次指定后就不在变化，并不需要屋子的变化。</p>
+
+<h2 id="副作用的好和坏">副作用的好和坏</h2>
+
+<p>现在，我们就来看「无副作用」和「副作用」到底好处和坏处是什么。</p>
+
+<h3 id="1-回溯问题">1. 回溯问题</h3>
+
+<p>如果一个函数，它对于一个确定的输入必定有一个确定的输出，这意味着，我们很容易找到问题、定位问题、以及复现问题。而如果一个程序包含有非常多的「副作用」，这意味着我们无法控制它在函数体外修改了什么，小到一个可变函数、大到计算机的环境变量。这也就导致为什么，很多程序的报错反馈，都要打印那么多的环境变量、计算机环境之类的概念。</p>
+
+<p>而无副作用意味着非常强的「可测性」，我们在后面的文章中也会一一列举出来。此外，「基于性质的测试」也成为可能。也就意味着，我们能更加强势地控制我们的程序。甚至对于一个静态的函数式语言（可惜<code class="language-plaintext highlighter-rouge">Python</code>不是），编译阶段就能暴露和解决绝大部分的问题。</p>
+
+<h3 id="2-无法和环境交互的程序其实大概率是没啥用的">2. 无法和环境交互的程序其实大概率是没啥用的</h3>
+
+<p>单纯的使用函数式的概念，我们事实上构造的是一个逻辑符号运算系统，如果没有和外界环境交互，则它就是楼台的玩具。我们甚至使用<code class="language-plaintext highlighter-rouge">print</code>都是在产生一个函数外的屏幕的副作用。所以，无副作用也就意味着它的应用很难。当然，「单子」的概念、把副作用限缩在一个非常小的范围里，这些方法都可以让我们对自己的程序把握还是非常强，并且 又有一定的「交互自由」。这个也是我们这个系列要强调的编程思路</p>
+
+<h3 id="3-效率">3. 效率</h3>
+
+<p>事实上，我们上面的举例中，已经可以看出，计算机(/图灵机)本身的概念就是基于环境或者说基于副作用的。而函数式编程在一个副作用机子上实现，本来就会效率下降。更何况，如果我们不使用类似<code class="language-plaintext highlighter-rouge">append</code>之类的原地操作，这就意味着更多空间，更多的值的复制的概念。这些都让程序的效率大打折扣。此外，<code class="language-plaintext highlighter-rouge">Python</code>对诸如递归等函数式的速度优化效果并不好，这也使得副作用可能更容易让人青睐。</p>
+
+<p>不过，这个效率的概念可能还有一些更加暧昧的地方。如果更大视野地看待函数式编程，里面有各种属于自己的优化方案，我们将会在后面一一介绍。</p>
+
+<h3 id="4-表达能力新">4. 表达能力（新）</h3>
+
+<p>在上面关于「环境」和「代换」的讨论中，我们也发现，如果使用「环境」的概念我们将要多出很多概念，譬如「传值」、「传址」、「可变变量」、「全局变量」之类的概念，而且这些概念是必须内生在语言内的。一部分程度上，这是表达效率弱的体现。事实上，函数式编程仅仅靠值和函数两个概念，加上基本的类型、运算就能实现几乎所有的事（或者说图灵完全的）。而我们后面提的「递归」、「单子」等概念，某种程度上是「派生的」而不是「内生的」。这更有Top-down数学的特征（当然数学是否如此那又是另一个问题了）。</p>
+
+<h2 id="一个关于定义域的说明">一个关于定义域的说明</h2>
+
+<p>最后，我们要提到一个关于「定义域」的小问题，我在上面的论述中没有提到，因为我们稍微用到类型/定义域的概念。譬如下面一个函数（我特意带上了类型注解）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</code></pre></div></div>
+
+<p>这个例子中，其实\(x\)的取值范围只能是\(x &gt; 0\)(虽然在例外的情况<code class="language-plaintext highlighter-rouge">Python</code>会输出<code class="language-plaintext highlighter-rouge">None</code>)，但事实上这种操作和数学中的函数还是有略微的区别，因为它在声明时的定义域为<code class="language-plaintext highlighter-rouge">int</code>事实上的定义域是\(x \in N\)。<code class="language-plaintext highlighter-rouge">int</code>里并非所有取值都没用到。</p>
+
+<p>在诸如<code class="language-plaintext highlighter-rouge">scala</code>或者<code class="language-plaintext highlighter-rouge">haskell</code>等函数式支持较好的语言里，也称这种函数为<strong>Partial Function</strong>（注意和<strong>Curry化</strong>中的<strong>Partial Applied Function</strong>的区别），意思是并不是所有的定义域的自变量都声明过了，比如，scala中定义上述的函数<code class="language-plaintext highlighter-rouge">f</code>会用到<code class="language-plaintext highlighter-rouge">PartialFunction</code>：</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="nv">f</span><span class="k">:</span> <span class="kt">PartialFunction</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">=&gt;</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>但在实际运用情况下，我们更倾向于用「无副作用」表述函数式编程的基本特性和性质，所以这种细节层面的讨论在大多数场合都被忽略，但是注重数学表达的你应该值得留意一下。</p>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li>张翠媛. 浅谈弗雷格的 “函数和概念”. <em>现代交际</em> 14 (2018).</li>
+  <li>Chiusano, Paul, and Runar Bjarnason. <em>Functional Programming in Scala</em>. Simon and Schuster, 2014.</li>
+  <li>Abelson, Harold, and Gerald Jay Sussman. <em>Structure and Interpretation of Computer Programs</em>. The MIT Press, 1996.</li>
+</ul>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2021-09-22T11:54:03+08:00" itemprop="datePublished">Sep 22, 2021</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B">函数式编程</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

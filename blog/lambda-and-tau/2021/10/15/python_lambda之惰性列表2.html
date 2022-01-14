@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python函数式编程系列010：惰性列表之动手实现List - 3Gee的博客</title>
+  <meta name="description" content="这篇文章，我们要动手实现一个List，不过和一般的文章不同，我们这里不用类来实现，而是用基本的数据结构，二元元组(a, b)和空元组()来实现。这两个都可以通过lambda直接定义出来，具体方法可以参考上一篇的内容。">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2021/10/15/python_lambda%E4%B9%8B%E6%83%B0%E6%80%A7%E5%88%97%E8%A1%A82.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">Python函数式编程系列010：惰性列表之动手实现List</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <p>这篇文章，我们要动手实现一个<code class="language-plaintext highlighter-rouge">List</code>，不过和一般的文章不同，我们这里不用类来实现，而是用基本的数据结构，二元元组<code class="language-plaintext highlighter-rouge">(a, b)</code>和空元组<code class="language-plaintext highlighter-rouge">()</code>来实现。这两个都可以通过<code class="language-plaintext highlighter-rouge">lambda</code>直接定义出来，具体方法可以参考上一篇的内容。</p>
+
+<p>我们考虑一下，<code class="language-plaintext highlighter-rouge">List</code>（也叫链表），最关键的是创建一个模式，可以无穷展开自己，保存一个值和下一个数据的，例如<code class="language-plaintext highlighter-rouge">[1, 2, 3, 4]</code>我们可以用<code class="language-plaintext highlighter-rouge">(1, (2, (3, (4, ()))))</code>。我们必须指定一个结尾，这个就是<code class="language-plaintext highlighter-rouge">()</code>在其中的作用，<code class="language-plaintext highlighter-rouge">()</code>同时代表空列表和列表结尾的含义。很容易地，我们可以将列表定义如下（我这里包了个函数，只是为了将数据隔离，防止我们使用自带的比较来实现一些功能）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">cons</span><span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">tail</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">helper</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">tail</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">helper</span>
+</code></pre></div></div>
+
+<p>然后我们定义两个函数，来获取里面的数据，类似上一篇接口中的<code class="language-plaintext highlighter-rouge">first</code>、<code class="language-plaintext highlighter-rouge">second</code>：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">head</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cons_list</span><span class="p">:</span> <span class="n">cons_list</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">tail</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cons_list</span><span class="p">:</span> <span class="n">cons_list</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>我们可以定义一个函数表示空的变量<code class="language-plaintext highlighter-rouge">empty_list_base</code>，这之后，为了方便计算，我们可以写一个生成<code class="language-plaintext highlighter-rouge">cons</code>的的方便的方法（当然这个实现用了<code class="language-plaintext highlighter-rouge">*arg</code>的概念，我们默认使用这个语法糖特性）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">cons_apply</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">empty_list_base</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cons</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cons_apply</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+</code></pre></div></div>
+
+<p>这样我们就可以很方便地完成新建<code class="language-plaintext highlighter-rouge">List</code>了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">cons_apply</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="c1"># 返回cons(1, cos(2, cos(3, ())))
+</span></code></pre></div></div>
+
+<p>为了方便比较，我们也可以定义一个判断列表是否相等的函数：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">equal_cons</span><span class="p">(</span><span class="n">this</span><span class="p">:</span> <span class="n">ListBase</span><span class="p">[</span><span class="n">S</span><span class="p">],</span> <span class="n">that</span><span class="p">:</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">this</span> <span class="o">==</span> <span class="n">empty_list_base</span> <span class="ow">and</span> <span class="n">that</span> <span class="o">!=</span> <span class="n">empty_list_base</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">elif</span> <span class="n">this</span> <span class="o">!=</span> <span class="n">empty_list_base</span> <span class="ow">and</span> <span class="n">that</span> <span class="o">==</span> <span class="n">empty_list_base</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">elif</span> <span class="n">this</span> <span class="o">==</span> <span class="n">empty_list_base</span> <span class="ow">and</span> <span class="n">that</span> <span class="o">==</span> <span class="n">empty_list_base</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">head</span><span class="p">(</span><span class="n">this</span><span class="p">)</span> <span class="o">==</span> <span class="n">head</span><span class="p">(</span><span class="n">that</span><span class="p">)</span> <span class="ow">and</span> <span class="n">equal_cons</span><span class="p">(</span><span class="n">tail</span><span class="p">(</span><span class="n">this</span><span class="p">),</span> <span class="n">tail</span><span class="p">(</span><span class="n">that</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>现在我们就可以很方便地做一些验证了。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">equal_cons</span><span class="p">(</span><span class="n">cons_apply</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">cons</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cons</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">cons</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">()))))</span>
+</code></pre></div></div>
+
+<p>现在我们需要就是要实现一些不需要循环实现的列表运算，就是上一篇说的<code class="language-plaintext highlighter-rouge">map</code>、<code class="language-plaintext highlighter-rouge">fold_left</code>和<code class="language-plaintext highlighter-rouge">filter</code>。</p>
+
+<p><code class="language-plaintext highlighter-rouge">map</code>的作用是将函数<code class="language-plaintext highlighter-rouge">f</code>带入到列表的每一个值，即我们带入<code class="language-plaintext highlighter-rouge">f</code>到列表的头之后，再把<code class="language-plaintext highlighter-rouge">map</code>应用到<code class="language-plaintext highlighter-rouge">tail</code>中，即：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">map_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">cons_list</span> <span class="o">==</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="n">empty_list_base</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cons</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">head</span><span class="p">(</span><span class="n">cons_list</span><span class="p">)),</span> <span class="n">map_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">tail</span><span class="p">(</span><span class="n">cons_list</span><span class="p">)))</span>
+</code></pre></div></div>
+
+<p>同理，我们可以实现<code class="language-plaintext highlighter-rouge">filter</code>和<code class="language-plaintext highlighter-rouge">fold_left</code>:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">filter_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">cons_list</span> <span class="o">==</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="n">empty_list_base</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">hd</span><span class="p">,</span> <span class="n">tl</span> <span class="o">=</span> <span class="n">head</span><span class="p">(</span><span class="n">cons_list</span><span class="p">),</span> <span class="n">tail</span><span class="p">(</span><span class="n">cons_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">f</span><span class="p">(</span><span class="n">hd</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">cons</span><span class="p">(</span><span class="n">hd</span><span class="p">,</span> <span class="n">filter_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">tl</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tl</span>
+
+<span class="k">def</span> <span class="nf">fold_left_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">cons_list</span> <span class="o">==</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="n">init</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">fold_left_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">init</span><span class="p">,</span> <span class="n">head</span><span class="p">(</span><span class="n">cons_list</span><span class="p">)),</span> <span class="n">tail</span><span class="p">(</span><span class="n">cons_list</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>这样，我们就可以实现一些基本功能了，比如将<code class="language-plaintext highlighter-rouge">[1, 2, 3, 4, 5]</code>每个元素加一，筛选偶数求和，就可以写成：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="n">fold_left_cons</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>    <span class="n">filter_cons</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> 
+<span class="o">&gt;&gt;&gt;</span>        <span class="n">map_cons</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>            <span class="n">cons_apply</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>    <span class="p">)))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">res</span> <span class="o">==</span> <span class="mi">12</span>
+</code></pre></div></div>
+
+<p>当然，这种风格的代码，嵌套的可读性很差，这里我们就想到了之前我们实现的<code class="language-plaintext highlighter-rouge">and_then</code>或<code class="language-plaintext highlighter-rouge">compose</code>函数，可以组合这些水管构造的东西。不过，我们将这些函数改成科里化会更方便的写。这样就可以用函数组合的风格了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">map_cons_curry</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">cons_list</span><span class="p">:</span> <span class="n">map_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">)</span>
+<span class="n">filter_cons_curry</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">cons_list</span><span class="p">:</span> <span class="n">filter_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">)</span>
+<span class="n">fold_left_cons_curry</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">init</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">cons_list</span><span class="p">:</span> <span class="n">fold_left_cons</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">cons_list</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>具体的调用就是下面的方法了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">f</span> <span class="o">=</span> <span class="n">and_then</span><span class="p">(</span>
+<span class="o">&gt;&gt;&gt;</span>    <span class="n">map_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+<span class="o">&gt;&gt;&gt;</span>    <span class="n">filter_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">),</span>
+<span class="o">&gt;&gt;&gt;</span>    <span class="n">fold_left_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">)(</span><span class="mi">0</span><span class="p">),</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">f</span><span class="p">(</span><span class="n">cons_apply</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="o">==</span> <span class="mi">12</span>
+</code></pre></div></div>
+
+<p>如果你使用了我维护的这个<a href="https://github.com/threecifanggen/python-functional-programming"><code class="language-plaintext highlighter-rouge">fppy</code></a>的例子的话，你也可以使用一个<code class="language-plaintext highlighter-rouge">F_</code>的修饰器轮子，这样就可以实现另一种基于类的链式写法：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">fppy.base</span> <span class="kn">import</span> <span class="n">F_</span><span class="p">,</span> <span class="n">I</span>
+
+<span class="n">F_</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>\
+    <span class="p">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">map_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>\
+    <span class="p">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">filter_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span>\
+    <span class="p">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">fold_left_cons_curry</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">)(</span><span class="mi">0</span><span class="p">))</span>\
+    <span class="p">.</span><span class="nb">apply</span><span class="p">(</span><span class="n">cons_apply</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="c1"># 返回12
+</span></code></pre></div></div>
+
+<p>这篇之中，我们简单仅用二元元组、相等、函数的概念，维护了一个列表的结果，并能通过一些列表函数对齐进行遍历计算、筛选。下一篇之中，我们讲开始粗略地讨论类、类型这些概念，这将方便我们以后的讨论。</p>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2021-10-15T16:40:30+08:00" itemprop="datePublished">Oct 15, 2021</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B">函数式编程</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E6%B5%8B%E8%AF%95">测试</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

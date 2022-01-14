@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>关于相关系数的两三件小事 - 3Gee的博客</title>
+  <meta name="description" content="回到原点">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2016/12/24/%E5%85%B3%E4%BA%8E%E7%9B%B8%E5%85%B3%E7%B3%BB%E6%95%B0%E7%9A%84%E4%B8%A4%E4%B8%89%E4%BB%B6%E5%B0%8F%E4%BA%8B.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">关于相关系数的两三件小事</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <h2 id="回到原点">回到原点</h2>
+
+<p>Let me think… 我们什么时候学过相关系数（Correlation）一个词语。对了，就是验证模型好坏的R方里面的R。在R语言里调用也很简单：</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cor</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>但是，该如何理解相关系数呢？是否<strong>相关系数可以验证OLS模型的好坏</strong>呢？这是本篇博文所要探讨的事。</p>
+
+<h3 id="相关系数的定义">相关系数的定义</h3>
+
+<p>我们定义相关系数R为：</p>
+
+\[R = \frac{E(XY)-E(X)E(Y)}{\sqrt{[E(X^2) - E^2(X)][E(Y^2) - E^2(Y)]}}\]
+
+<p>我们看，这个相关系数到底代表着什么。</p>
+
+<h4 id="解释一相关系数是两组数据距离中心点的度量">解释一：相关系数是两组数据距离中心点的度量</h4>
+
+<p>显然，我们可以转化以上的相关系数为：</p>
+
+\[R = \frac{\frac{(x - \bar{x})}{N}}{\sigma^2_x}·\frac{\frac{(y - \bar{y})}{N}}{\sigma^2_y}\]
+
+<p>这种方式理解的相关系数，其实是所有点与
+\((\bar{x}, \bar{y})\)
+之间的距离标准化后的值。换句话说，R方式衡量<strong>到数据中心点的距离</strong>的一个标准。</p>
+
+<h4 id="解释二去量纲的协方差">解释二：去量纲的协方差</h4>
+
+<p>我们首先回到协方差(Covariance)的定义中来。协方差的定义为，</p>
+
+\[cov(x, y) = E[(x - \bar{x})(y - \bar{y})]\]
+
+<p>这个定义是从方差（Variance，试比较两者英文间的差距）的概念来的</p>
+
+\[var(x) = E[(x - \bar{x})(x - \bar{x})]\]
+
+<p>方差是描述一维数据的疏散程度，因此，协方差则是描述二维数据的疏散程度。这是理解协方差的一种手段。</p>
+
+<p>另一种手段是以白数据（数据只是在各个方向上符合高斯分布）的线性变换：</p>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161611673.png" alt="image-20210816161611673" /></p>
+
+<blockquote>
+  <p>图片引用自<a href="http://blog.csdn.net/u010182633/article/details/45937051">会敲键盘的猩猩的博客</a></p>
+</blockquote>
+
+<p>而后，显然，</p>
+
+\[R = \frac{cov(x, y)}{\sigma^2_x\sigma^2_y}\]
+
+<p>显然，这就是将协方差矩阵做了一次调整，使得对角线（不是反对角线）上的数据为1。这也就说明取消了协方差在自身变异上影响，此外，数值也被严格限定在了-1~1之间。</p>
+
+<p>用同样地方法，我们也可以做出变异系数（coefficient of variation，cv）的概念：</p>
+
+\[cv(x) = \frac{\sigma}{\mu}\]
+
+<p>这个概念类似。是标准差去量纲的结果，通过这种处理，使得我们很容易两组数据的疏散程度，而不用考虑到本身数据的影响，因为cv本身是去量纲并严格限制在-1 ~ 1之间的度量。</p>
+
+<blockquote>
+  <p>提示：试通过协方差引申到PCA方法。</p>
+</blockquote>
+
+<h4 id="解释三最小二乘法回归的模型误差来理解">解释三：最小二乘法回归的模型误差来理解</h4>
+
+<p>这里直接使用的理解方式就是我们一般意义上的R方。</p>
+
+\[R^2 = 1 - \frac{\sum{(Y - \hat{Y})^2}}{\sum{(Y - \bar{Y})^2}}= 1 - \frac{SSE}{SSTO}\]
+
+<p>我们把上式中的SSTO称为总体方差，SSE称为模型误差。</p>
+
+<p>因此我们看出</p>
+
+\[SSTO - SSE\]
+
+<p>是衡量模型好坏的方式：如果这个值很大，说明模型误差对总体方差的贡献较低；相反，贡献较高。而为了归一化这个值，最简单地方法就是除以SSTO使得度量值在0~1之间。</p>
+
+<p>另一个准确地描述是，<strong>R方描述的是因变量的方差有多少比例通过自变量模型所解释</strong>。</p>
+
+<p>这就是相关系数的平方为什么能衡量模型好坏的原因。</p>
+
+<h3 id="相关系数的局限">相关系数的局限</h3>
+
+<ol>
+  <li><strong>高的R方不一定代表模型的预测能力强</strong>。R方无法考虑过拟合。</li>
+  <li><strong>R方并不能保证拟合效果</strong>。原因是我们可以看出，R方基于的假设其实是一个二维的高斯分布，或者说，R方只能预测某种线性趋势。如果遇到明显的非线性关系，显然R方是无效的。</li>
+</ol>
+
+<h2 id="其实相关系数不止一种">其实相关系数不止一种</h2>
+
+<p>我们称之前描述的相关系数为<strong>Pearson相关系数</strong>。我们看到了Pearson相关系数的种种局限，因此，为了避免相关系数无法解释非线性关系这个问题，其他种的相关系数也被发明出来。在此介绍两种常见的替代方案：<strong>Kendall Tau相关系数</strong>和<strong>Spearman相关系数</strong>。这两种系数的特点是，其实都是基于顺序的相关系数。</p>
+
+<h3 id="kendall-tau相关系数">Kendall Tau相关系数</h3>
+
+<p>Kendall Tau相关系数的原理相当简单，假设就是：</p>
+
+<blockquote>
+  <p>i) 如果x和y有同增的关系，则对于任何\((x_i, y_i), (x_j, y_i)\)，如果\(x_i &lt; x_j\)，则\(y_i &lt; y_j\)
+ii) 相反，如果x和y有同减的关系，则如果\(x_i &lt; x_j\)，则\(y_i &gt; y_j\)</p>
+</blockquote>
+
+<p>因此我们可以检查所有<strong>点对</strong>（Point Pairs，即两个二维点），计算二维数据里面符合条件i)的点对（一致点对，concordant point pairs）对数目和ii)的点对(不一致点对，discordant point pairs)数目，如果这两个值的差值来描述关系。显然如果两种情况的点数目大致相当，说明两个维度关系相当“混乱”。</p>
+
+<p>此外，我们要讲这个值归一化，简单地，除以点对的总数目即可，显然点对个数为，</p>
+
+\[{n \choose 2} = \frac{(n-1)n}{2}\]
+
+<p>因此，最后计算的kendall tau相关系数为：</p>
+
+\[\tau = \frac{\#concordant - \#discordant}{n(n - 1)/2}\]
+
+<p>当然，我们基于这个假设，可以很容易看出，</p>
+
+<ol>
+  <li>kendall tau相关系数的使用场景比较多，因为kendall tau不依赖于线性假说。</li>
+  <li>kendall tau相关系数描述的两组数的单调性特征，任何一种单调的关系都可以采用kendall tau来实现。</li>
+</ol>
+
+<h3 id="spearman相关系数">Spearman相关系数</h3>
+
+<p>Spearman相关系数与Pearson相关系数很类似，只是最后计算的是两个变量转化为序数（Rank）的操作。可以参考下面的转换：</p>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161659885.png" alt="image-20210816161659885" /></p>
+
+<p><img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161938201.png" alt="image-20210816161938201" /></p>
+
+<p>我们用rg(x)表示x的序数变换，d为序数之差，因此：</p>
+
+\[cor_{spearman}(x, y) = \frac{cov(rg(x), rg(y))}{\sigma^2_{rg(x)}\sigma^2_{rg(y)}} = 1 - \frac{6d_i^2}{n(n^2 - 1)}\]
+
+<p>Spearman相关系数的优点是显然的：</p>
+
+<ul>
+  <li>当数据具有非线性相关时，Spearman相关系数敏感度比Pearson要好<br />
+<img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161846030.png" alt="image-20210816161846030" /></li>
+  <li>当没有outliers时，Spearman和Pearson结果类似
+<img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161829178.png" alt="image-20210816161829178" /></li>
+  <li>当有outliers时，Spearman比较稳健
+<img src="https://typora-picgo-bed.oss-cn-beijing.aliyuncs.com/image-20210816161923383.png" alt="image-20210816161923383" /></li>
+</ul>
+
+<h2 id="相关系数相似度距离">相关系数、相似度、距离</h2>
+
+<p>我们在此讨论相关系数的其他应用。</p>
+
+<h3 id="特征工程的相关系数">特征工程的相关系数</h3>
+
+<ol>
+  <li>相关系数描述的是因变量与自变量的关系这个直接可以作为筛选特征的一个标准。</li>
+  <li>自变量与自变量的Pearson相关系数很强也往往意味着共线性，这提示PCA降维的效果会非常好。</li>
+</ol>
+
+<h3 id="相关系数--相似度">相关系数 = 相似度</h3>
+
+<p>我们回到相关系数的性质，相关系数描述的是两个自变量之间的关系是否紧密，其实一定程度就是描述相似性，即两个向量的相似性。</p>
+
+<p>这提示，相关系数可以作为相似度（Similarity）用来建构协同过滤的推荐系统。这种方案也被叫做Pearson相似度。我们可以以此来比较Pearson相似度和余弦相似度是类似模式，Pearson相似度是去中心化的余弦相似度：</p>
+
+\[Sim_{cosine} = \frac{\lt x, y\gt}{||x||·||y||}\]
+
+\[Sim_{pearson} = \frac{\lt (x - \bar{x}), (y - \bar{y})\gt}{||(x - \bar{x})||·||y - \bar{y})||}\]
+
+<h3 id="相似度即距离的反面">相似度即距离的反面</h3>
+
+<p>首先，我们要有一个敏感度，<strong>任何相似度都可以作为距离的度量</strong>。而事实上，我们经常用（1 - 归一化后的相似度）来表示距离。</p>
+
+<p>而，距离对我们来说意味着什么？距离意味着所有依赖距离的方法都可以运用到相关系数。</p>
+
+<h4 id="kmeans聚类">KMeans聚类</h4>
+
+<p>KMeans聚类是一个常见地基于距离假设的模型。可以构想的例子是，在做用户分类的时候，可以把他们购买某一些商品（往往具有一类特征的商品）的矩阵转化为一个相关系数的特征，从而获得具有解释性的模型。</p>
+
+<h4 id="社交网络分析">社交网络分析</h4>
+
+<p>网络分析是另一个典型的基于距离的门类，因此，基于所有用户之间的距离（值得注意的是，相关系数形成的网络很有可能是个全连接的网络）可以完成所有网络分析技术（节点的中心特征，社群特征等）。</p>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2016-12-24T12:05:53+08:00" itemprop="datePublished">Dec 24, 2016</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6">统计学</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%9B%B8%E5%85%B3%E7%B3%BB%E6%95%B0">相关系数</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%89%B9%E5%BE%81%E5%B7%A5%E7%A8%8B">特征工程</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

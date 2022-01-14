@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python函数式编程系列005：离题之定义自然数 - 3Gee的博客</title>
+  <meta name="description" content="前言">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2021/09/27/python_lambda%E4%B9%8B%E7%9A%AE%E4%BA%9A%E8%AF%BA%E5%85%AC%E7%90%86.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">Python函数式编程系列005：离题之定义自然数</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <h2 id="前言">前言</h2>
+
+<p>在我们已经掌握了那么多建管子的方法之后，我们开始离题，看看我们能用最少的概念做哪些自举产生的事。在这一章中我们讲仅使用字符串<code class="language-plaintext highlighter-rouge">"e"</code>，函数，<code class="language-plaintext highlighter-rouge">if-else</code>分支，<code class="language-plaintext highlighter-rouge">=="e"</code>运算，这四个概念来实现一个自然数的概念（实际中还用到了<code class="language-plaintext highlighter-rouge">bool</code>值，不过<code class="language-plaintext highlighter-rouge">bool</code>本身也可以用<code class="language-plaintext highlighter-rouge">"e"</code>和<code class="language-plaintext highlighter-rouge">f("e")</code>表示）。</p>
+
+<h2 id="皮亚诺公理">皮亚诺公理</h2>
+
+<p>我们首先回顾一下，数学如何定义即皮亚诺公理如何定义自然数，事实上，皮亚诺公理定义的是「无限可数集」的概念</p>
+
+<blockquote>
+  <ul>
+    <li>(1) \(e \in S\)</li>
+    <li>(2) \((\forall a \in S)(f(a) \in S)\)</li>
+    <li>(3) \((\forall b \in S)(\forall c \in S)(f(b) = f(c) \rightarrow b = c)\)</li>
+    <li>(4) \((\forall \in S)(f(a) \ne e)\)</li>
+    <li>(5) \((\forall A \subseteq S)(((e \in A) \land (\forall a \in A)(f(a) \in A)) \rightarrow (A = S))\)</li>
+  </ul>
+</blockquote>
+
+<ul>
+  <li>(1) 表示我们需要一个初始值，来表述我们可以从第一个东西开始数数，在这个符号集里叫\(e\)。对应于自然数的「1」的概念。</li>
+  <li>(2) 表示往下数一个数的操作，这个符号集里用\(f\)表述，我们一般也把这个操作叫<strong>后继</strong>。对应自然数中「加一」/「往下数一」的概念</li>
+  <li>(3) 确定恒等关系。</li>
+  <li>(4) 确定\(e\)不是任何数的后继，保证它是第一个被数的数。</li>
+  <li>(5) 归纳法</li>
+</ul>
+
+<h2 id="实现">实现</h2>
+
+<p>我们仅仅需要下面两行代码就已经实现了自然数的全部定义，我们使用递归表示向下数数，用<code class="language-plaintext highlighter-rouge">"e"</code>表达了起始值「1」</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">one</span> <span class="o">=</span> <span class="s">"e"</span> <span class="c1"># 1
+</span><span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="k">lambda</span> <span class="p">:</span> <span class="n">x</span> <span class="c1"># 后继
+</span></code></pre></div></div>
+
+<p>当然，这么一个定义，是没有任何意义的，我们还需要实现<strong>判断相等</strong>、<strong>加法</strong>、<strong>乘法</strong>这三个最简单的算法。首先判断全等的方法就是我们将两个函数无限地求值下去，看到最后是不是同时得到<code class="language-plaintext highlighter-rouge">"e"</code>值，这也是对应了性质(3)：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">equal</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="o">==</span><span class="s">"e"</span> <span class="ow">and</span> <span class="n">y</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">x</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">elif</span> <span class="n">y</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">equal</span><span class="p">(</span><span class="n">x</span><span class="p">(),</span> <span class="n">y</span><span class="p">())</span>
+
+
+<span class="n">not_equal</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="ow">not</span><span class="p">(</span><span class="n">equal</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>注意我在上面的实现中使用了<code class="language-plaintext highlighter-rouge">x =="e"</code>这种前面带空格而后面不带空格的写法，其实是为了强调，<code class="language-plaintext highlighter-rouge">=="e"</code>是一个一元运算，我们仅使用到了它，而不需要其他概念。而仔细探究这个算式，我们发现其实它也隐式地用到定义(4)，只要一个不为<code class="language-plaintext highlighter-rouge">"e"</code>我们就可以确定它们是不相等的。</p>
+
+<p>定义加法其实也是一个非常容易的操作，我们只需要让一个参数计算后继，一个参数求值产生前继的概念：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">y</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">add</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">y</span><span class="p">())</span>
+</code></pre></div></div>
+
+<p>最后是乘法的概念，这个我们可以调用<code class="language-plaintext highlighter-rouge">add</code>来递归实现：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">y</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">add</span><span class="p">(</span><span class="n">multiply</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">()),</span> <span class="n">x</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>其实我们也可以同理获得一个自然数求幂的函数，非常类似上面<code class="language-plaintext highlighter-rouge">multiply</code>的实现</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">power</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">y</span> <span class="o">==</span><span class="s">"e"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">multiply</span><span class="p">(</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">()),</span> <span class="n">x</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>这样我们可以非常快速地给20以内的数取名字了：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">one</span> <span class="o">=</span> <span class="s">"e"</span>
+<span class="n">two</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">one</span><span class="p">)</span>
+<span class="n">three</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">two</span><span class="p">)</span>
+<span class="n">four</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">three</span><span class="p">)</span>
+<span class="n">five</span><span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">four</span><span class="p">)</span>
+<span class="n">six</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">five</span><span class="p">)</span>
+<span class="n">seven</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">six</span><span class="p">)</span>
+<span class="n">eight</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">seven</span><span class="p">)</span>
+<span class="n">nine</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">eight</span><span class="p">)</span>
+<span class="n">ten</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">nine</span><span class="p">)</span>
+<span class="n">eleven</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">ten</span><span class="p">)</span>
+<span class="n">twelve</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">eleven</span><span class="p">)</span>
+<span class="n">thirteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">twelve</span><span class="p">)</span>
+<span class="n">fourteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">thirteen</span><span class="p">)</span>
+<span class="n">fifteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">fourteen</span><span class="p">)</span>
+<span class="n">sixteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">fifteen</span><span class="p">)</span>
+<span class="n">seventeen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">sixteen</span><span class="p">)</span>
+<span class="n">eighteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">seventeen</span><span class="p">)</span>
+<span class="n">nineteen</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">eighteen</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>OK，最后我们可以通过<code class="language-plaintext highlighter-rouge">equal</code>验证我们的算法对不对：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">equal</span><span class="p">(</span><span class="n">add</span><span class="p">(</span><span class="n">two</span><span class="p">,</span> <span class="n">one</span><span class="p">),</span> <span class="n">three</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">not_equal</span><span class="p">(</span><span class="n">power</span><span class="p">(</span><span class="n">two</span><span class="p">,</span> <span class="n">three</span><span class="p">),</span> <span class="n">seven</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">equal</span><span class="p">(</span><span class="n">power</span><span class="p">(</span><span class="n">two</span><span class="p">,</span> <span class="n">three</span><span class="p">),</span> <span class="n">eight</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">assert</span> <span class="n">equal</span><span class="p">(</span><span class="n">multiply</span><span class="p">(</span><span class="n">three</span><span class="p">,</span> <span class="n">five</span><span class="p">),</span> <span class="n">fifteen</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="结语">结语</h2>
+
+<p>这一篇我们偏题地完成了一个「自然数」的定义，目的是为了展现，函数式编程的魅力在于：</p>
+
+<ol>
+  <li>我们可以用非常少的概念（在这个例子中是4个）就可以自举地实现非常多的事情。这个也是早期LISP语言（一种常见的动态函数式语言）会那么在AI领域或者一些对语言内核大小非常敏感的领域的原因。</li>
+  <li>因为函数式编程中的函数和数学上的函数非常接近，这使得在数学上使用的代数运算，都可以非常方便的实现（当然这一点我们在后面也会一一例举出来）。</li>
+</ol>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2021-09-27T10:52:10+08:00" itemprop="datePublished">Sep 27, 2021</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B">函数式编程</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E9%80%92%E5%BD%92">递归</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>

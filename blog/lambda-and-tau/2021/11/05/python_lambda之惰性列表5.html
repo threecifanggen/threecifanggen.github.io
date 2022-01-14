@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python函数式编程系列013：惰性列表之流式处理 - 3Gee的博客</title>
+  <meta name="description" content="如果对于惰性列表更多地理解，就会发现，无限惰性列表的概念和「列队」的概念很相符，或者我们说的「消息队列」。这是一个很好的类似SparkStreaming或者Flink之类的流式处理的抽象。">
+
+  
+  <link rel="stylesheet" href="/assets/styles/core.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/fontello.css?v=20220111135546">
+  <link rel="stylesheet" href="/assets/styles/highlighting/murphy.css?v=20220111135546">
+
+  <link rel="canonical" href="https://3gee.netlify.app/lambda-and-tau/2021/11/05/python_lambda%E4%B9%8B%E6%83%B0%E6%80%A7%E5%88%97%E8%A1%A85.html">
+  <link rel="alternate" type="application/rss+xml" title="3Gee的博客" href="/feed.xml">
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <style>.MathJax_ExBox { font-family: serif; }</style>
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-56025474-3', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+  <body>
+
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper">
+      <article class="post" lang="en" itemscope itemtype="http://schema.org/BlogPosting" >
+
+  <header class="post-header">
+  <a class="site-title" href="/">3Gee的博客</a>
+  <h1 class="post-title baseline-fix" itemprop="name headline">Python函数式编程系列013：惰性列表之流式处理</h1>
+</header>
+
+
+
+
+  <div class="post-content" itemprop="articleBody">
+    <p>如果对于惰性列表更多地理解，就会发现，无限惰性列表的概念和「列队」的概念很相符，或者我们说的「消息队列」。这是一个很好的类似<code class="language-plaintext highlighter-rouge">SparkStreaming</code>或者<code class="language-plaintext highlighter-rouge">Flink</code>之类的流式处理的抽象。</p>
+
+<p>所以，我们可以看到许多的和列队有关的模块是以(无限)生成器的方式维护的，而处理这种数据结构就是函数式编程特别擅长的。但函数式特别不适合层级结构，当然高阶函数可以完成这些事，但这依赖过多的人为规范；<strong>类编程会提供一个很好的代码骨架，然后在细部处理数据时调用函数式方法</strong>，这个才是整个系列所要推崇的。</p>
+
+<p>我们可以模拟一个一直产生数据的<code class="language-plaintext highlighter-rouge">faker</code>，当然，你也可以把它当来自于任何消息队列传来的数据：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">faker</span> <span class="kn">import</span> <span class="n">Faker</span>
+<span class="k">def</span> <span class="nf">data_stream_gen</span><span class="p">():</span>
+    <span class="n">fk</span> <span class="o">=</span> <span class="n">Faker</span><span class="p">()</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="p">{</span>
+            <span class="s">"create_time"</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">fk</span>
+                <span class="p">.</span><span class="n">date_time_between_dates</span><span class="p">()</span>
+                <span class="p">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">"%Y-%m-%d %H:%M:%S"</span><span class="p">)),</span>
+            <span class="s">"name"</span><span class="p">:</span> <span class="n">fk</span><span class="p">.</span><span class="n">name</span><span class="p">(),</span>
+            <span class="s">"email"</span><span class="p">:</span> <span class="n">fk</span><span class="p">.</span><span class="n">email</span><span class="p">(),</span>
+            <span class="s">"age"</span><span class="p">:</span> <span class="n">fk</span><span class="p">.</span><span class="n">random_int</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+            <span class="s">"address"</span><span class="p">:</span> <span class="n">fk</span><span class="p">.</span><span class="n">address</span><span class="p">(),</span>
+            <span class="s">"device"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s">"browser"</span><span class="p">:</span> <span class="n">fk</span><span class="p">.</span><span class="n">chrome</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+</code></pre></div></div>
+
+<p>这样，我们就可以使用我封装好的<code class="language-plaintext highlighter-rouge">fppy</code>中的<code class="language-plaintext highlighter-rouge">LazyList</code>来装载这个生成器（当然不是必须的，只是为了方便一种类似<strong>Point Free</strong>/管道的写法，具体的代码仓库<a href="https://github.com/threecifanggen/python-functional-programming">点击此处</a>），并获取前三个验证一下：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">LazyList</span><span class="p">(</span><span class="n">data_stream_gen</span><span class="p">()).</span><span class="n">take</span><span class="p">(</span><span class="mi">3</span><span class="p">).</span><span class="n">collect</span><span class="p">()</span>
+<span class="p">[{</span><span class="s">'create_time'</span><span class="p">:</span> <span class="s">'2021-11-05 13:57:30'</span><span class="p">,</span>
+  <span class="s">'name'</span><span class="p">:</span> <span class="s">'Kevin Parrish'</span><span class="p">,</span>
+  <span class="s">'email'</span><span class="p">:</span> <span class="s">'mooremichael@example.net'</span><span class="p">,</span>
+  <span class="s">'age'</span><span class="p">:</span> <span class="mi">19</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'4311 James Divide</span><span class="se">\n</span><span class="s">Pacehaven, PA 64853'</span><span class="p">,</span>
+  <span class="s">'device'</span><span class="p">:</span> <span class="p">{</span><span class="s">'browser'</span><span class="p">:</span> <span class="s">'Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_10_8) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/44.0.879.0 Safari/535.2'</span><span class="p">}},</span>
+ <span class="p">{</span><span class="s">'create_time'</span><span class="p">:</span> <span class="s">'2021-11-05 13:57:30'</span><span class="p">,</span>
+  <span class="s">'name'</span><span class="p">:</span> <span class="s">'Donald Cochran'</span><span class="p">,</span>
+  <span class="s">'email'</span><span class="p">:</span> <span class="s">'wendyjones@example.net'</span><span class="p">,</span>
+  <span class="s">'age'</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'255 Ward Spring Suite 178</span><span class="se">\n</span><span class="s">Adamland, MI 99867'</span><span class="p">,</span>
+  <span class="s">'device'</span><span class="p">:</span> <span class="p">{</span><span class="s">'browser'</span><span class="p">:</span> <span class="s">'Mozilla/5.0 (iPad; CPU iPad OS 12_4_8 like Mac OS X) AppleWebKit/533.2 (KHTML, like Gecko) CriOS/60.0.839.0 Mobile/04P519 Safari/533.2'</span><span class="p">}},</span>
+ <span class="p">{</span><span class="s">'create_time'</span><span class="p">:</span> <span class="s">'2021-11-05 13:57:30'</span><span class="p">,</span>
+  <span class="s">'name'</span><span class="p">:</span> <span class="s">'Gary Lowe'</span><span class="p">,</span>
+  <span class="s">'email'</span><span class="p">:</span> <span class="s">'udean@example.net'</span><span class="p">,</span>
+  <span class="s">'age'</span><span class="p">:</span> <span class="mi">25</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'60536 Kelly Green</span><span class="se">\n</span><span class="s">North Brittanyland, DE 80335'</span><span class="p">,</span>
+  <span class="s">'device'</span><span class="p">:</span> <span class="p">{</span><span class="s">'browser'</span><span class="p">:</span> <span class="s">'Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.1 (KHTML, like Gecko) Chrome/58.0.882.0 Safari/536.1'</span><span class="p">}}]</span>
+</code></pre></div></div>
+
+<p>我们现在假设要完成以下需求：</p>
+
+<ol>
+  <li>将用户相关信息<code class="language-plaintext highlighter-rouge">name</code>, <code class="language-plaintext highlighter-rouge">email</code>, <code class="language-plaintext highlighter-rouge">age</code>, <code class="language-plaintext highlighter-rouge">adress</code>包裹在一个<code class="language-plaintext highlighter-rouge">user_info</code>中</li>
+  <li>将<code class="language-plaintext highlighter-rouge">create_time</code>改成时间戳格式</li>
+  <li>删除<code class="language-plaintext highlighter-rouge">device</code>。</li>
+</ol>
+
+<p>此时，我们只需要单独维护一个个需求，不考虑整个数据流而是只专注在一个数据，每个功能实现成一个函数，这样就完全实现组合式的解耦了，整个系统也变得更加可测:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
+
+<span class="k">def</span> <span class="nf">drop_device</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s">'device'</span><span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">user_info</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">user_info_name</span> <span class="o">=</span> <span class="p">{</span><span class="s">"name"</span><span class="p">,</span> <span class="s">"email"</span><span class="p">,</span> <span class="s">"age"</span><span class="p">,</span> <span class="s">"adress"</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="p">{</span>
+        <span class="s">'user_info'</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span><span class="n">v</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">user_info_name</span>
+        <span class="p">},</span>
+    <span class="p">},</span> <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">user_info_name</span><span class="p">}}</span>
+
+<span class="k">def</span> <span class="nf">change_create_time</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">x</span><span class="p">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">res</span><span class="p">[</span><span class="s">'create_time'</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span><span class="p">.</span><span class="n">strptime</span><span class="p">(</span>
+        <span class="n">res</span><span class="p">[</span><span class="s">'create_time'</span><span class="p">],</span>
+        <span class="s">"%Y-%m-%d %H:%M:%S"</span>
+    <span class="p">).</span><span class="n">timestamp</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">res</span>
+</code></pre></div></div>
+
+<p>然后我们就可以顺序调用，但是他们在计算时则是惰性执行，不是等到所有列表处理完上一步来完成任务：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">LazyList</span><span class="p">(</span><span class="n">data_stream_gen</span><span class="p">())</span>\
+    <span class="p">.</span><span class="nb">map</span><span class="p">(</span><span class="n">drop_device</span><span class="p">)</span>\
+    <span class="p">.</span><span class="nb">map</span><span class="p">(</span><span class="n">user_info</span><span class="p">)</span>\
+    <span class="p">.</span><span class="nb">map</span><span class="p">(</span><span class="n">change_create_time</span><span class="p">)</span>\
+    <span class="p">.</span><span class="n">take</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>\
+    <span class="p">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="p">[{</span><span class="s">'user_info'</span><span class="p">:</span> <span class="p">{</span><span class="s">'name'</span><span class="p">:</span> <span class="s">'Norman Brown'</span><span class="p">,</span>
+   <span class="s">'email'</span><span class="p">:</span> <span class="s">'xmcclain@example.net'</span><span class="p">,</span>
+   <span class="s">'age'</span><span class="p">:</span> <span class="mi">41</span><span class="p">},</span>
+  <span class="s">'create_time'</span><span class="p">:</span> <span class="mf">1636093122.0</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'39251 Kimberly Causeway Apt. 464</span><span class="se">\n</span><span class="s">East Heidiburgh, TX 27435'</span><span class="p">},</span>
+ <span class="p">{</span><span class="s">'user_info'</span><span class="p">:</span> <span class="p">{</span><span class="s">'name'</span><span class="p">:</span> <span class="s">'Amanda Nguyen'</span><span class="p">,</span>
+   <span class="s">'email'</span><span class="p">:</span> <span class="s">'russellpeter@example.com'</span><span class="p">,</span>
+   <span class="s">'age'</span><span class="p">:</span> <span class="mi">30</span><span class="p">},</span>
+  <span class="s">'create_time'</span><span class="p">:</span> <span class="mf">1636093122.0</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'53844 Tina Divide Suite 297</span><span class="se">\n</span><span class="s">Maryburgh, IL 85323'</span><span class="p">},</span>
+ <span class="p">{</span><span class="s">'user_info'</span><span class="p">:</span> <span class="p">{</span><span class="s">'name'</span><span class="p">:</span> <span class="s">'Sara Thompson'</span><span class="p">,</span>
+   <span class="s">'email'</span><span class="p">:</span> <span class="s">'zknapp@example.com'</span><span class="p">,</span>
+   <span class="s">'age'</span><span class="p">:</span> <span class="mi">46</span><span class="p">},</span>
+  <span class="s">'create_time'</span><span class="p">:</span> <span class="mf">1636093122.0</span><span class="p">,</span>
+  <span class="s">'address'</span><span class="p">:</span> <span class="s">'666 Stephanie Trafficway Apt. 808</span><span class="se">\n</span><span class="s">Port Ashleyburgh, WI 50626'</span><span class="p">}]</span>
+</code></pre></div></div>
+
+<p>我们发现，其实这种数据结构是非常好的处理流式数据，事实上，<code class="language-plaintext highlighter-rouge">flink</code>、<code class="language-plaintext highlighter-rouge">rdd</code>本质上也就是基于这种基本数据结构实现的。当然总结来说，它的主要好处是：</p>
+
+<ol>
+  <li>是一个基于顺序的处理，类似于基本数据结构「队列」。</li>
+  <li>每一个数据本身是一个最小单元，可以很好地实现锁（这个在之后我们会继续讨论）。</li>
+  <li>基于一些函数式地规则编写，我们能让整个处理更具有可读性，函数之间的组合也是弱依赖的，实现函数级别的解耦。</li>
+</ol>
+
+<p>下面的篇章里，我们讲稍微离开惰性列表的讨论，开始进入错误处理、测试以及抽象代数结构方面的内容。</p>
+
+<div id="comments"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+    new Valine({
+        el: '#comments',
+        app_id: 'qrAQjOGaeAWqza9Eb2aLJBg8-gzGzoHsz',
+        app_key: 'UYnglEGtJuNEqBaQwYmH8cPY',
+        placeholder:'输入你的评论',
+        visitor: true
+    });
+</script>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-meta">
+       <time datetime="2021-11-05T10:00:30+08:00" itemprop="datePublished">Nov 5, 2021</time> 
+      
+    </div>
+
+    
+    <ul class="post-tags" aria-label="TagList">
+      
+      <li><a class="tag-link" href="/tags/Python">Python</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B">函数式编程</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E7%B1%BB%E5%9E%8B">类型</a></li>
+      
+      <li><a class="tag-link" href="/tags/%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A1">面向对象</a></li>
+      
+    </ul>
+    
+  </footer>
+
+  
+  
+  
+
+</article>
+
+    </div>
+    <script type="text/javascript">
+  (function () {
+    var resize = function () {
+      this.width = 0.5 * (this.naturalWidth || this.width);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".half-size, .retina2x"), function(el) {
+      if (el.naturalWidth) {
+        resize.call(el);
+      } else {
+        el.onload = resize;
+      }
+    });
+  })();
+</script>
+
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script type="text/javascript">
+  (function () {
+    mermaid.init({ startOnLoad: true }, "pre code.language-mermaid", function () {
+      const codeBlock = document.querySelector('code.language-mermaid');
+      codeBlock.style.backgroundColor = 'initial';
+
+      const preBlock = codeBlock.parentNode;
+      preBlock.style.border = 'none';
+      preBlock.style.textAlign = 'center';
+      preBlock.style.backgroundColor = 'initial';
+    });
+  })();
+</script>
+    
+  </main>
+
+  <footer class="site-footer">
+
+  <div class="wrapper">
+    <div class="social-links">
+      <a class="social-link social-github" href="https://github.com/threecifanggen">
+        <i class="icon-github"></i>
+      </a>
+      <a class="social-link social-twitter" href="https://twitter.com/">
+        <i class="icon-twitter"></i>
+      </a>
+      <a class="social-link social-instagram" href="https://instagram.com/threecifanggen">
+        <i class="icon-instagram"></i>
+      </a>
+      <a class="social-link social-rss" href="/feed.xml" target="_blank">
+        <i class="icon-rss"></i>
+      </a>
+    </div>
+    <div class="credits">
+      KAGAMI, made with <i class="icon-heart"></i> by Kamikat
+    </div>
+  </div>
+
+</footer>
+
+
+  <script>
+  (function(elements) {
+    var elements = Array.prototype.slice.call(document.getElementsByClassName('baseline-fix'));
+    for (var i = 0; i != elements.length; i++) {
+      var el = elements[i];
+      el.innerHTML = el.innerHTML.replace(/[\u2000-\u206e⸀-\u2e7e⺀-\u2efe⼀-\u2fde⿰-\u2ffe\u3000-〾\u3040-ゞ゠-ヾ\u3100-\u312e\u3130-ㆎ㆐-㆞ㆠ-\u31be㇀-\u31eeㇰ-ㇾ㈀-㋾㌀-㏾㐀-\u4dbe一-\u9ffe\ua960-\ua97e가-\ud7ae\ud7b0-\ud7fe豈-\ufafe︰-﹎\uff00-￮]|[\ud840-\ud868\ud86a-\ud86c][\udc00-\udfff]|\ud82c[\udc00-\udcfe]|\ud869[\udc00-\udede\udf00-\udfff]|\ud86d[\udc00-\udf3e\udf40-\udfff]|\ud86e[\udc00-\udc1e]|\ud87e[\udc00-\ude1e]/g, function (ch) {
+        return '<span class="baseline-fix-block">' + ch + '<' + '/span>';
+      });
+      el.classList.remove('baseline-fix');
+    }
+  })(Array.prototype.slice.call(document.getElementsByClassName('baseline-fix')));
+</script>
+
+
+</body>
+
+</html>
